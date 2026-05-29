@@ -114,6 +114,11 @@ const TableBlueprintPage = () => {
   const [activeTab, setActiveTab] = useState('All');
   const { user } = useAuth();
 
+  const [tables, setTables] = useState([]);
+  const [restaurant, setRestaurant] = useState(null);
+  const [selectedTable, setSelectedTable] = useState(null);
+  const [loading, setLoading] = useState(true);
+
   const menuItems = useMemo(() => {
     if (!restaurant?.menuHighlights) return [];
     const hasNewlines = restaurant.menuHighlights.includes('\n');
@@ -182,11 +187,6 @@ const TableBlueprintPage = () => {
     }
     return `${String(hours).padStart(2, '0')}:00`;
   };
-
-  const [tables, setTables] = useState([]);
-  const [restaurant, setRestaurant] = useState(null);
-  const [selectedTable, setSelectedTable] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   // Booking Form State
   const [date, setDate] = useState(getTodayDateString());
