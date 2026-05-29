@@ -232,33 +232,91 @@ exports.optimizeLayout = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No tables found to optimize.' });
     }
 
-    const count = tables.length;
-    const cols = Math.ceil(Math.sqrt(count));
-    const rows = Math.ceil(count / cols);
-    
-    const xStep = cols > 1 ? (60 / (cols - 1)) : 60;
-    const yStep = rows > 1 ? (50 / (rows - 1)) : 50;
-
     const updatedTables = [];
-    for (let i = 0; i < count; i++) {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
+    
+    // Group tables by category to assign to physical zones
+    const vipTables = [];
+    const windowTables = [];
+    const barTables = [];
+    const mainTables = [];
+
+    tables.forEach(t => {
+      const cat = (t.category || '').toLowerCase();
+      if (cat.includes('vip') || cat.includes('cabin') || cat.includes('private')) {
+        vipTables.push(t);
+      } else if (cat.includes('window') || cat.includes('scenic')) {
+        windowTables.push(t);
+      } else if (cat.includes('bar') || cat.includes('lounge')) {
+        barTables.push(t);
+      } else {
+        mainTables.push(t);
+      }
+    });
+
+    // 1. Arrange VIP Cabin tables (left room, x = 12.5%, y = 38% to 73%)
+    if (vipTables.length > 0) {
+      const count = vipTables.length;
+      for (let i = 0; i < count; i++) {
+        const y = count > 1 ? 38 + i * (35 / (count - 1)) : 52;
+        const updated = await prisma.restaurantTable.update({
+          where: { id: vipTables[i].id },
+          data: { positionX: 12.5, positionY: Math.round(y * 10) / 10 }
+        });
+        updatedTables.push(updated);
+      }
+    }
+
+    // 2. Arrange Window Side tables (top center room, y = 11%, x = 34% to 62%)
+    if (windowTables.length > 0) {
+      const count = windowTables.length;
+      for (let i = 0; i < count; i++) {
+        const x = count > 1 ? 34 + i * (28 / (count - 1)) : 48;
+        const updated = await prisma.restaurantTable.update({
+          where: { id: windowTables[i].id },
+          data: { positionX: Math.round(x * 10) / 10, positionY: 11.0 }
+        });
+        updatedTables.push(updated);
+      }
+    }
+
+    // 3. Arrange Bar & Lounge tables (right room, x = 85%, y = 11% to 75%)
+    if (barTables.length > 0) {
+      const count = barTables.length;
+      for (let i = 0; i < count; i++) {
+        const y = count > 1 ? 11 + i * (64 / (count - 1)) : 11;
+        const updated = await prisma.restaurantTable.update({
+          where: { id: barTables[i].id },
+          data: { positionX: 85.0, positionY: Math.round(y * 10) / 10 }
+        });
+        updatedTables.push(updated);
+      }
+    }
+
+    // 4. Arrange Main Dining tables (center room, x = 34% to 62%, y = 38% to 76%)
+    if (mainTables.length > 0) {
+      const count = mainTables.length;
+      const cols = Math.ceil(Math.sqrt(count));
+      const rows = Math.ceil(count / cols);
       
-      const x = cols > 1 ? 20 + col * xStep : 50;
-      const y = rows > 1 ? 25 + row * yStep : 50;
+      const xStep = cols > 1 ? (28 / (cols - 1)) : 28;
+      const yStep = rows > 1 ? (38 / (rows - 1)) : 38;
 
-      // Add a slight random noise to look natural
-      const finalX = Math.round(Math.min(Math.max(x + (Math.random() * 4 - 2), 15), 85));
-      const finalY = Math.round(Math.min(Math.max(y + (Math.random() * 4 - 2), 20), 80));
+      for (let i = 0; i < count; i++) {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        
+        const x = cols > 1 ? 34 + col * xStep : 48;
+        const y = rows > 1 ? 38 + row * yStep : 57;
 
-      const updated = await prisma.restaurantTable.update({
-        where: { id: tables[i].id },
-        data: {
-          positionX: finalX,
-          positionY: finalY
-        }
-      });
-      updatedTables.push(updated);
+        const updated = await prisma.restaurantTable.update({
+          where: { id: mainTables[i].id },
+          data: {
+            positionX: Math.round(x * 10) / 10,
+            positionY: Math.round(y * 10) / 10
+          }
+        });
+        updatedTables.push(updated);
+      }
     }
 
     res.status(200).json({

@@ -386,18 +386,18 @@ const TableBlueprintPage = () => {
         const rawTables = tablesRes.data.data;
         const allUnpositioned = rawTables.every(t => !t.positionX && !t.positionY);
         const PREDEFINED_POSITIONS = [
-          { x: 30, y: 15 }, // Window 1
-          { x: 50, y: 15 }, // Window 2
-          { x: 70, y: 15 }, // Window 3
-          { x: 12, y: 35 }, // VIP 1
-          { x: 12, y: 65 }, // VIP 2
-          { x: 88, y: 35 }, // Bar 1
-          { x: 88, y: 65 }, // Bar 2
-          { x: 38, y: 40 }, // Center 1
-          { x: 62, y: 40 }, // Center 2
-          { x: 38, y: 65 }, // Center 3
-          { x: 62, y: 65 }, // Center 4
-          { x: 50, y: 82 }  // Entrance/Center
+          { x: 34.0, y: 11.0 }, // Scenic Window 1
+          { x: 48.0, y: 11.0 }, // Scenic Window 2
+          { x: 62.0, y: 11.0 }, // Scenic Window 3
+          { x: 12.5, y: 45.0 }, // VIP Cabin 1
+          { x: 12.5, y: 68.0 }, // VIP Cabin 2
+          { x: 85.0, y: 11.0 }, // Bar Lounge 1
+          { x: 85.0, y: 75.0 }, // Bar Lounge 2
+          { x: 36.0, y: 45.0 }, // Main Dining Center 1
+          { x: 62.0, y: 45.0 }, // Main Dining Center 2
+          { x: 36.0, y: 68.0 }, // Main Dining Center 3
+          { x: 62.0, y: 68.0 }, // Main Dining Center 4
+          { x: 49.0, y: 80.0 }  // Main Dining Entrance Center
         ];
 
         const positionedTables = rawTables.map((t, index) => {
