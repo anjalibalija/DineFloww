@@ -9,13 +9,11 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import DashboardMap from '../components/DashboardMap';
 
 const sidebarItems = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'reservations', label: 'Reservations', icon: Calendar },
   { id: 'history', label: 'History', icon: BookOpen },
-  { id: 'nearby', label: 'Nearby Map', icon: Map },
   { id: 'favorites', label: 'Favorites', icon: Heart },
   { id: 'reviews', label: 'My Reviews', icon: MessageSquare },
   { id: 'rewards', label: 'Coupons', icon: Gift },
@@ -41,7 +39,6 @@ const Dashboard = () => {
   const [coupons, setCoupons] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [myReviews, setMyReviews] = useState([]);
-  const [allRestaurants, setAllRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Navigation
@@ -69,18 +66,16 @@ const Dashboard = () => {
 
   const fetchUserData = useCallback(async () => {
     try {
-      const [bookingsRes, couponsRes, favoritesRes, reviewsRes, restaurantsRes] = await Promise.all([
+      const [bookingsRes, couponsRes, favoritesRes, reviewsRes] = await Promise.all([
         axios.get('/api/bookings/my'),
         axios.get('/api/coupons/my'),
         axios.get('/api/favorites'),
-        axios.get('/api/reviews/my'),
-        axios.get('/api/restaurants')
+        axios.get('/api/reviews/my')
       ]);
       setBookings(bookingsRes.data.data);
       setCoupons(couponsRes.data.data);
       setFavorites(favoritesRes.data.data);
       setMyReviews(reviewsRes.data.data);
-      setAllRestaurants(restaurantsRes.data.data || []);
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
     } finally {
@@ -321,7 +316,6 @@ const Dashboard = () => {
               {activeTab === 'overview' && 'Dashboard'}
               {activeTab === 'reservations' && 'My Reservations'}
               {activeTab === 'history' && 'Dining History'}
-              {activeTab === 'nearby' && 'Nearby Restaurants'}
               {activeTab === 'favorites' && 'My Favorites'}
               {activeTab === 'reviews' && 'My Reviews'}
               {activeTab === 'rewards' && 'Rewards & Coupons'}
@@ -330,7 +324,6 @@ const Dashboard = () => {
               {activeTab === 'overview' && `Welcome back, ${user?.name?.split(' ')[0]}. Here's your dining summary.`}
               {activeTab === 'reservations' && `You have ${upcomingBookings.length} upcoming reservation${upcomingBookings.length !== 1 ? 's' : ''}.`}
               {activeTab === 'history' && `${pastBookings.length} past dining experience${pastBookings.length !== 1 ? 's' : ''}.`}
-              {activeTab === 'nearby' && 'Discover restaurants around your location.'}
               {activeTab === 'favorites' && `${favorites.length} saved restaurant${favorites.length !== 1 ? 's' : ''}.`}
               {activeTab === 'reviews' && `${myReviews.length} review${myReviews.length !== 1 ? 's' : ''} shared.`}
               {activeTab === 'rewards' && `${activeCoupons.length} active coupon${activeCoupons.length !== 1 ? 's' : ''} available.`}
@@ -559,12 +552,7 @@ const Dashboard = () => {
             </motion.div>
           )}
 
-          {/* ═══ NEARBY MAP TAB ═══ */}
-          {activeTab === 'nearby' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-              <DashboardMap restaurants={allRestaurants} />
-            </motion.div>
-          )}
+
         </main>
       </div>
 

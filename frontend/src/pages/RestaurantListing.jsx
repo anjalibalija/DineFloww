@@ -60,84 +60,7 @@ const expandQuery = (query) => {
   return aliases ? aliases : [lower];
 };
 
-const MOCK_RESTAURANTS = [
-  {
-    id: "demo-res-1",
-    name: "The Golden Leaf Bistro",
-    cuisine: "Italian",
-    location: "Indiranagar, Bengaluru",
-    city: "Bengaluru",
-    rating: 4.8,
-    image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
-    phone: "+91 98765 43210",
-    email: "info@goldenleaf.com",
-    priceRange: "₹₹₹",
-    openingTime: "11:00",
-    closingTime: "23:00",
-    latitude: 12.9716,
-    longitude: 77.5946,
-    description: "An elegant, contemporary Italian bistro offering authentic hand-rolled pastas, wood-fired truffle pizzas, and a selection of curated fine wines.",
-    crowdLevel: "Medium",
-    queueCount: 3
-  },
-  {
-    id: "demo-res-2",
-    name: "Saffron & Sage Fine Dine",
-    cuisine: "Indian",
-    location: "Jubilee Hills, Hyderabad",
-    city: "Hyderabad",
-    rating: 4.9,
-    image: "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=800&q=80",
-    phone: "+91 91234 56789",
-    email: "saffronsage@dine.com",
-    priceRange: "₹₹₹₹",
-    openingTime: "12:00",
-    closingTime: "23:30",
-    latitude: 17.3850,
-    longitude: 78.4867,
-    description: "Experience the royal heritage of Awadhi and Nizami dining with our signature slow-cooked biryanis, gold leaf seekh kebabs, and traditional hospitality.",
-    crowdLevel: "High",
-    queueCount: 5
-  },
-  {
-    id: "demo-res-3",
-    name: "L'Aura Rouge",
-    cuisine: "French",
-    location: "Colaba, Mumbai",
-    city: "Mumbai",
-    rating: 4.7,
-    image: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=800&q=80",
-    phone: "+91 22 2284 5678",
-    email: "laurarouge@luxury.com",
-    priceRange: "₹₹₹₹",
-    openingTime: "12:00",
-    closingTime: "23:00",
-    latitude: 18.9219,
-    longitude: 72.8347,
-    description: "A gorgeous, candlelit sanctuary of French gastronomy featuring classic techniques, local seasonal ingredients, and a sophisticated, romantic ambiance.",
-    crowdLevel: "Low",
-    queueCount: 1
-  },
-  {
-    id: "demo-res-4",
-    name: "Sakura Zen Dining",
-    cuisine: "Japanese",
-    location: "GK II, New Delhi",
-    city: "New Delhi",
-    rating: 4.6,
-    image: "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=800&q=80",
-    phone: "+91 11 4163 1234",
-    email: "sakurazen@tokyofeed.com",
-    priceRange: "₹₹₹",
-    openingTime: "12:30",
-    closingTime: "22:30",
-    latitude: 28.5355,
-    longitude: 77.2410,
-    description: "Modern Japanese dining featuring artfully crafted sashimi, hand-rolled sushi, and authentic teppanyaki in an interior inspired by peaceful Zen gardens.",
-    crowdLevel: "Medium",
-    queueCount: 2
-  }
-];
+
 
 const RestaurantListing = () => {
   const { isAdmin } = useAuth();
@@ -172,25 +95,15 @@ const RestaurantListing = () => {
   const [ratingFilter, setRatingFilter] = useState(false);
   const [priceFilter, setPriceFilter] = useState('All'); // 'All' | '1' | '2' | '3' | '4'
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'map' | 'split'
-  const [isDemoMode, setIsDemoMode] = useState(false);
 
   useEffect(() => {
     const fetchRestaurants = async () => {
       try {
         const res = await axios.get('/api/restaurants');
-        if (res.data.data && res.data.data.length > 0) {
-          setRestaurants(res.data.data);
-          setIsDemoMode(false);
-        } else {
-          // If no restaurants are in DB, fallback to mock restaurants as demo mode
-          setRestaurants(MOCK_RESTAURANTS);
-          setIsDemoMode(true);
-        }
+        setRestaurants(res.data.data || []);
       } catch {
         setError('Failed to fetch restaurants.');
-        // Fallback to demo mode on error too
-        setRestaurants(MOCK_RESTAURANTS);
-        setIsDemoMode(true);
+        setRestaurants([]);
       } finally {
         setLoading(false);
       }
@@ -381,7 +294,7 @@ const RestaurantListing = () => {
       </div>
     );
   }
-  if (error && !isDemoMode) {
+  if (error) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center text-brown-900 font-serif text-xl">
         {error}
@@ -391,13 +304,6 @@ const RestaurantListing = () => {
 
   return (
     <div className="min-h-screen bg-cream-100/40 pb-16">
-      {/* Dynamic Demo Mode Banner */}
-      {isDemoMode && (
-        <div className="bg-gold-50 border-b border-gold-500/10 py-2.5 px-4 text-center text-xs text-brown-800 font-sans shadow-sm flex items-center justify-center gap-1.5">
-          <Sparkles size={13} className="text-gold-500 animate-pulse" />
-          <span>Currently viewing curated dining choices in <strong className="font-bold text-brown-900">Demo Mode</strong>. switch to owner portal to set up your restaurant profile.</span>
-        </div>
-      )}
 
       {/* Breadcrumb section */}
       <div className="max-w-7xl mx-auto px-4 py-4 text-[11px] text-brown-700/60 font-sans flex items-center gap-1.5 tracking-wider uppercase">
@@ -769,39 +675,34 @@ const RestaurantListing = () => {
               <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-gold-500/10">
                 <MapPin size={36} className="text-gold-500" />
               </div>
-              <p className="text-2xl font-serif font-bold text-brown-900 mb-2">No Dining Venues Found</p>
+              <p className="text-2xl font-serif font-bold text-brown-900 mb-2">
+                {restaurants.length === 0 ? 'No Registered Restaurants' : 'No Dining Venues Found'}
+              </p>
               <p className="text-sm text-brown-700/60 mb-8 font-sans max-w-md mx-auto">
-                {locationQuery
+                {restaurants.length === 0
+                  ? 'There are currently no restaurants registered in the system. If you are a restaurant owner, please go to the owner portal to register your restaurant.'
+                  : locationQuery
                   ? `We couldn't find any premium restaurants matching "${locationQuery}". Try selecting another area or clearing filters.`
                   : 'Try adjusting your search criteria or filter options to discover restaurants.'}
               </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                <button
-                  onClick={() => {
-                    setSearchQuery('');
-                    setLocationQuery('');
-                    setUserCoords(null);
-                    setNearMeActive(false);
-                    setActiveCuisine('All');
-                    setRatingFilter(false);
-                    setPriceFilter('All');
-                  }}
-                  className="w-full sm:w-auto bg-cream-200 hover:bg-beige-200 text-brown-900 px-6 py-3 rounded-xl font-bold transition-all text-xs cursor-pointer shadow-sm"
-                >
-                  Clear All Filters
-                </button>
-                {isDemoMode && (
+              {restaurants.length > 0 && (
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                   <button
                     onClick={() => {
-                      setRestaurants(MOCK_RESTAURANTS);
-                      setIsDemoMode(true);
+                      setSearchQuery('');
+                      setLocationQuery('');
+                      setUserCoords(null);
+                      setNearMeActive(false);
+                      setActiveCuisine('All');
+                      setRatingFilter(false);
+                      setPriceFilter('All');
                     }}
-                    className="w-full sm:w-auto bg-brown-900 hover:bg-gold-500 text-cream-100 hover:text-brown-900 px-6 py-3 rounded-xl font-serif font-bold transition-all text-xs cursor-pointer shadow-sm"
+                    className="w-full sm:w-auto bg-cream-200 hover:bg-beige-200 text-brown-900 px-6 py-3 rounded-xl font-bold transition-all text-xs cursor-pointer shadow-sm"
                   >
-                    Reset Demo Venues 🍽️
+                    Clear All Filters
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
