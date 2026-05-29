@@ -1,0 +1,442 @@
+Software Requirements Specification (SRS)
+
+Project: TableMate AI – AI-Based Restaurant Table Booking Platform
+
+⸻
+
+1. Introduction
+
+1.1 Purpose
+
+The purpose of this project is to develop a fully functional AI-powered restaurant table booking platform that allows users to discover restaurants, view real-time table layouts, select preferred seating, and make reservations intelligently.
+
+The platform combines:
+
+* Restaurant discovery
+* Real-time table reservation
+* Interactive floor blueprint visualization
+* Queue management
+* AI recommendations
+* Gamified discounts
+* Admin management
+
+The system must be production-style, scalable, responsive, and visually premium.
+
+⸻
+
+1.2 Scope
+
+The platform will provide:
+
+* User authentication
+* Restaurant search by location
+* Nearby restaurant discovery
+* Interactive table blueprint booking
+* Table category selection
+* Queue notifications
+* Puzzle-based discount rewards
+* AI-driven recommendations
+* Admin dashboard
+* Booking analytics
+* Bestseller table tracking
+
+Target platforms:
+
+* Desktop
+* Tablet
+* Mobile
+
+⸻
+
+1.3 Intended Audience
+
+* Developers
+* UI/UX Designers
+* Testers
+* Project Evaluators
+* Restaurant Owners
+* End Users
+
+⸻
+
+2. Overall Description
+
+2.1 Product Perspective
+
+This is a standalone web application using:
+
+* React frontend
+* Node.js backend
+* MongoDB database
+* REST APIs
+* AI recommendation logic
+
+⸻
+
+2.2 User Classes
+
+1. Customer
+
+Can:
+
+* Sign up/login
+* Search restaurants
+* Book tables
+* Play puzzles
+* Receive discounts
+* View bookings
+
+2. Admin
+
+Can:
+
+* Manage restaurants
+* Manage table layouts
+* Manage bookings
+* View analytics
+
+⸻
+
+2.3 Operating Environment
+
+Frontend:
+
+* React + Vite
+* Tailwind CSS
+
+Backend:
+
+* Node.js + Express.js
+
+Database:
+
+* MongoDB
+
+Deployment:
+
+* Vercel (Frontend)
+* Render/Railway (Backend)
+* MongoDB Atlas
+
+⸻
+
+3. Functional Requirements
+
+3.1 Authentication Module
+
+Features
+
+* User registration
+* User login
+* JWT authentication
+* Password hashing
+* Session management
+
+Inputs
+
+* Name
+* Email
+* Password
+
+Outputs
+
+* Authentication token
+* Success/error messages
+
+⸻
+
+3.2 Restaurant Discovery Module
+
+Features
+
+* Detect current location
+* Search nearby restaurants
+* View all restaurants
+* Filter restaurants
+
+Filters
+
+* Cuisine
+* Price
+* Rating
+* Availability
+* Table category
+
+⸻
+
+3.3 Restaurant Details Module
+
+Features
+
+* Restaurant images
+* Ratings
+* Menu preview
+* Operating hours
+* Crowd level
+* Queue status
+
+⸻
+
+3.4 Table Blueprint Module
+
+Features
+
+* Interactive floor map
+* Visual table arrangement
+* Table status visualization
+
+Table Categories
+
+* Rooftop
+* Window Side
+* Corner Side
+* Center
+* Courtyard
+* Private Cabin
+* Couple Table
+
+Status Types
+
+* Available
+* Booked
+* Bestseller
+* Selected
+
+⸻
+
+3.5 Booking Module
+
+Features
+
+* Select date/time
+* Select people count
+* Reserve table
+* Cancel booking
+* Booking confirmation
+
+Validations
+
+* Table availability
+* Capacity matching
+* Duplicate prevention
+
+⸻
+
+3.6 Bestseller Table Module
+
+Features
+
+* Track repeated bookings
+* Mark popular tables
+* Display bestseller badges
+
+⸻
+
+3.7 Queue Alert Module
+
+Features
+
+* Detect long queue
+* Notify users
+* Suggest puzzle challenge
+
+⸻
+
+3.8 Puzzle Discount Module
+
+Features
+
+* Logic puzzles
+* Timer-based challenge
+* Coupon generation
+
+Rewards
+
+* Discount coupons
+
+⸻
+
+3.9 AI Recommendation Engine
+
+Features
+
+* Smart table suggestions
+* Crowd prediction
+* Preferred timing suggestions
+* Personalized restaurant recommendations
+
+⸻
+
+3.10 User Profile Module
+
+Features
+
+* Booking history
+* Upcoming reservations
+* Saved coupons
+* Favorite restaurants
+
+⸻
+
+3.11 Admin Dashboard
+
+Features
+
+* Add/edit restaurants
+* Manage table layouts
+* Manage bookings
+* View analytics
+
+⸻
+
+4. Non-Functional Requirements
+
+4.1 Performance
+
+* Page load < 3 seconds
+* API response < 1 second
+
+⸻
+
+4.2 Scalability
+
+System should support:
+
+* 10,000+ users
+* Multiple restaurants
+* Concurrent bookings
+
+⸻
+
+4.3 Security
+
+* JWT authentication
+* Password hashing
+* Protected APIs
+* Role-based access
+
+⸻
+
+4.4 Reliability
+
+* 99% uptime
+* Backup support
+
+⸻
+
+4.5 Usability
+
+* Mobile responsive
+* Intuitive UI
+* Premium design
+
+⸻
+
+4.6 Maintainability
+
+* Modular architecture
+* Reusable components
+* Clear folder structure
+
+⸻
+
+5. Database Requirements
+
+Collections
+
+Users
+
+* name
+* email
+* password
+* role
+* coupons
+
+Restaurants
+
+* name
+* cuisine
+* location
+* crowdLevel
+
+Tables
+
+* restaurantId
+* category
+* capacity
+* bookingCount
+
+Bookings
+
+* userId
+* restaurantId
+* tableId
+* bookingTime
+
+Coupons
+
+* code
+* discount
+* expiry
+
+⸻
+
+6. API Requirements
+
+Authentication APIs
+
+* POST /signup
+* POST /login
+
+Restaurant APIs
+
+* GET /restaurants
+* GET /restaurants/nearby
+
+Booking APIs
+
+* POST /bookings
+* GET /bookings/my
+
+Puzzle APIs
+
+* GET /puzzle
+* POST /verify
+
+⸻
+
+7. UI/UX Requirements
+
+Theme
+
+Luxury AI dining experience
+
+Color Palette
+
+* Gold
+* Brown
+* Cream
+* Dark Green
+
+Typography
+
+* Playfair Display
+* Inter
+
+⸻
+
+8. Constraints
+
+* Internet connection required
+* Browser geolocation required
+* MongoDB Atlas dependency
+
+⸻
+
+9. Future Enhancements
+
+* Live table occupancy sensors
+* Voice booking assistant
+* AR restaurant walkthrough
+* AI menu recommendations
+* Dynamic pricing

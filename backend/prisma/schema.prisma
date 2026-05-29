@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                String   @id @default(uuid())
+  name              String
+  email             String   @unique
+  password          String
+  role              String   @default("user")
+  phone             String   @default("")
+  profilePicture    String   @default("")
+  emailVerified     Boolean  @default(false)
+  verificationToken String   @default("")
+  loginAttempts     Int      @default(0)
+  lockUntil         DateTime?
+  twoFactorEnabled  Boolean  @default(false)
+  otpCode           String   @default("")
+  otpExpires        DateTime?
+  createdAt         DateTime @default(now())
+
+  bankAccountName     String?
+  bankAccountNumber   String?
+  bankIfsc            String?
+  bankName            String?
+  bankBranch          String?
+  bankAccountVerified Boolean  @default(false)
+
+  bookings    Booking[]
+  coupons     Coupon[]
+  favorites   Favorite[]
+  restaurants Restaurant[]
+  reviews     Review[]
+}
+
+model Restaurant {
+  id              String   @id @default(uuid())
+  name            String
+  description     String
+  cuisine         String
+  location        String
+  city            String   @default("")
+  state           String   @default("")
+  pincode         String   @default("")
+  phone           String   @default("")
+  email           String   @default("")
+  ownerName       String   @default("")
+  latitude        Float?
+  longitude       Float?
+  priceRange      String   @default("$$")
+  openingTime     String   @default("10:00")
+  closingTime     String   @default("22:00")
+  menuHighlights  String   @default("")
+  tableCategories String   @default("")
+  rating          Float?
+  image           String   @default("no-photo.jpg")
+  crowdLevel      String   @default("Low")
+  queueCount      Int      @default(0)
+  adminId         String?
+  admin           User?    @relation(fields: [adminId], references: [id])
+  createdAt       DateTime @default(now())
+
+  tables      RestaurantTable[]
+  bookings    Booking[]
+  favorites   Favorite[]
+  reviews     Review[]
+}
+
+model RestaurantTable {
+  id           String     @id @default(uuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  tableNumber  String
+  category     String
+  capacity     Int
+  description  String     @default("")
+  bookingCount Int        @default(0)
+  isBestseller Boolean    @default(false)
+  positionX    Float      @default(0)
+  positionY    Float      @default(0)
+
+  bookings     Booking[]
+}
+
+model Booking {
+  id             String          @id @default(uuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurantId   String
+  restaurant     Restaurant      @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  tableId        String
+  table          RestaurantTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  bookingDate    DateTime
+  bookingTime    String
+  peopleCount    Int
+  specialRequest String          @default("")
+  status         String          @default("Confirmed")
+  paymentId      String?         
+  orderId        String?         
+  createdAt      DateTime        @default(now())
+
+  @@unique([tableId, bookingDate, bookingTime])
+}
+
+model Coupon {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  discount  Float
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isUsed    Boolean  @default(false)
+  expiry    DateTime
+  createdAt DateTime @default(now())
+}
+
+model Favorite {
+  id           String     @id @default(uuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([userId, restaurantId])
+}
+
+model Review {
+  id           String     @id @default(uuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  rating       Int
+  comment      String
+  createdAt    DateTime   @default(now())
+}

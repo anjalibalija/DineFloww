@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>DineFlow - Luxury Fine Dining Reservations</title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Experience the ultimate in fine dining reservation with DineFlow. Choose your exact table on an interactive 3D floor plan, check real-time waitlists, and enjoy logic challenges." />
+    <meta name="keywords" content="dineflow, restaurant booking, table reservation, 3d floor plan, interactive seating, fine dining reservation, queue rewards" />
+    <meta name="author" content="DineFlow Team" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://dineflow.com/" />
+    <meta property="og:title" content="DineFlow - Fine Dining & 3D Interactive Table Reservations" />
+    <meta property="og:description" content="Reserve not just a time, but your exact preferred table. Experience 3D interactive floor plans, live crowd predictions, and logic rewards." />
+    <meta property="og:image" content="/images/luxury_dining_hero.png" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://dineflow.com/" />
+    <meta property="twitter:title" content="DineFlow - Fine Dining & 3D Interactive Table Reservations" />
+    <meta property="twitter:description" content="Reserve not just a time, but your exact preferred table. Experience 3D interactive floor plans, live crowd predictions, and logic rewards." />
+    <meta property="twitter:image" content="/images/luxury_dining_hero.png" />
+  </head>
+  <body>
+    <div id="root">
+      <!-- Premium Splash / Loading Screen -->
+      <div id="dineflow-splash" style="position: fixed; inset: 0; background-color: #1e120a; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; font-family: 'Playfair Display', serif; color: #d4af37;">
+        <div style="margin-bottom: 24px; position: relative; width: 80px; height: 80px;">
+          <!-- Outer spinning gold border -->
+          <div style="box-sizing: border-box; display: block; position: absolute; width: 80px; height: 80px; border: 3px solid transparent; border-top-color: #d4af37; border-radius: 50%; animation: spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;"></div>
+          <!-- Inner pulsing star/sparkle -->
+          <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 28px; animation: pulse 1.5s ease-in-out infinite;">✦</div>
+        </div>
+        <h1 style="font-size: 32px; font-weight: 700; margin: 0 0 8px 0; letter-spacing: 2px;">DINE FLOW</h1>
+        <p style="font-size: 12px; margin: 0; opacity: 0.6; text-transform: uppercase; letter-spacing: 3px;">Culinary Experience Redefined</p>
+        <style>
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+          @keyframes pulse {
+            0%, 100% { opacity: 0.3; transform: scale(0.9); }
+            50% { opacity: 1; transform: scale(1.1); }
+          }
+        </style>
+      </div>
+    </div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
