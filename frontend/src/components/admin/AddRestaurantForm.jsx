@@ -296,7 +296,14 @@ const AddRestaurantForm = ({ onClose, onSuccess, isDemoMode = false }) => {
           {/* Section: Menu & Tables */}
           <p className="text-xs font-bold text-brown-800 uppercase tracking-widest mb-3 flex items-center gap-2"><FileText size={14} /> Menu & Tables</p>
           <div className="grid grid-cols-2 gap-3 mb-6">
-            <Field label="Menu Highlights" icon={FileText} name="menuHighlights" placeholder="Truffle Risotto, Sushi Platter, ..." value={form.menuHighlights} onChange={handleChange} />
+            <div className="col-span-2">
+              <label className="block text-xs font-semibold text-brown-700/60 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                <FileText size={14} className="text-gray-400" /> Menu Highlights (Newline separated)
+              </label>
+              <textarea name="menuHighlights" value={form.menuHighlights} onChange={handleChange} rows={5}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-brown-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/30 focus:border-gold-500 transition-all bg-white resize-none font-semibold leading-relaxed"
+                placeholder="Dish Name (Category): ₹Price - Description&#10;Next Dish (Category): ₹Price - Description" />
+            </div>
             <Field label="Table Categories" icon={LayoutGrid} name="tableCategories" placeholder="Rooftop, Window Side, Private Cabin, ..." value={form.tableCategories} onChange={handleChange} />
           </div>
 

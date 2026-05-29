@@ -133,14 +133,43 @@ const EditRestaurantForm = ({ restaurant, onClose, onSuccess, isDemoMode = false
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setMenuImage({
-        base64: reader.result,
-        mimeType: file.type
-      });
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1000;
+        const MAX_HEIGHT = 1000;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+        setMenuImage({
+          base64: compressedBase64,
+          mimeType: 'image/jpeg'
+        });
+      };
+      img.src = event.target.result;
     };
     reader.readAsDataURL(file);
   };
+
 
   const digitizeMenu = async () => {
     if (!menuImage) return;
@@ -148,7 +177,15 @@ const EditRestaurantForm = ({ restaurant, onClose, onSuccess, isDemoMode = false
     try {
       if (isDemoMode) {
         await new Promise(r => setTimeout(r, 1200));
-        const highlightString = "Truffle Naan Pizza (Bestseller): ₹450, Saffron Risotto (Main Course): ₹550, Butter Chicken Ravioli (Pasta): ₹480";
+        const items = [
+          { name: "Truffle Naan Pizza", description: "Stone baked naan bread with black truffle paste and fresh mozzarella", price: 450, category: "Bestseller" },
+          { name: "Saffron Risotto", description: "Creamy carnaroli rice with saffron threads and 24-month parmesan", price: 550, category: "Main Course" },
+          { name: "Butter Chicken Ravioli", description: "Handmade pasta stuffed with butter chicken, served in makhani sauce", price: 480, category: "Pasta" }
+        ];
+        const highlightString = items.map(item => {
+          const descPart = item.description ? ` - ${item.description}` : '';
+          return `${item.name} (${item.category}): ₹${item.price}${descPart}`;
+        }).join('\n');
         setForm(prev => ({
           ...prev,
           menuHighlights: highlightString
@@ -163,7 +200,10 @@ const EditRestaurantForm = ({ restaurant, onClose, onSuccess, isDemoMode = false
       });
       
       const items = res.data.data;
-      const highlightString = items.map(item => `${item.name} (${item.category}): ₹${item.price}`).join(', ');
+      const highlightString = items.map(item => {
+        const descPart = item.description ? ` - ${item.description}` : '';
+        return `${item.name} (${item.category}): ₹${item.price}${descPart}`;
+      }).join('\n');
       setForm(prev => ({
         ...prev,
         menuHighlights: highlightString
@@ -315,7 +355,14 @@ const EditRestaurantForm = ({ restaurant, onClose, onSuccess, isDemoMode = false
           </div>
 
           <div className="grid grid-cols-2 gap-3 mb-6">
-            <Field label="Menu Highlights" icon={FileText} name="menuHighlights" value={form.menuHighlights} onChange={handleChange} />
+            <div className="col-span-2">
+              <label className="block text-xs font-semibold text-brown-700/60 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                <FileText size={14} className="text-gray-400" /> Menu Highlights (Newline separated)
+              </label>
+              <textarea name="menuHighlights" value={form.menuHighlights} onChange={handleChange} rows={5}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-brown-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/30 focus:border-gold-500 transition-all bg-white resize-none font-semibold leading-relaxed"
+                placeholder="Dish Name (Category): ₹Price - Description&#10;Next Dish (Category): ₹Price - Description" />
+            </div>
             <Field label="Table Categories" icon={LayoutGrid} name="tableCategories" value={form.tableCategories} onChange={handleChange} />
           </div>
 

@@ -25,10 +25,17 @@ const RestaurantDetail = () => {
 
   const menuItems = useMemo(() => {
     if (!restaurant?.menuHighlights) return [];
-    // Split by either comma or newline
-    const itemsList = restaurant.menuHighlights.split(/[,\n]+/).map(h => h.trim()).filter(Boolean);
+    
+    // If the string contains newlines, split ONLY by newlines (safely preserving commas in descriptions).
+    // Otherwise, split by commas.
+    const hasNewlines = restaurant.menuHighlights.includes('\n');
+    const itemsList = hasNewlines
+      ? restaurant.menuHighlights.split('\n').map(h => h.trim()).filter(Boolean)
+      : restaurant.menuHighlights.split(',').map(h => h.trim()).filter(Boolean);
+
     return itemsList.map(h => {
-      const regex = /(.*?)(?:\((.*?)\))?:\s*(.*)/;
+      // Robust regex that extracts name, category, price, and description
+      const regex = /(.*?)(?:\((.*?)\))?:\s*(?:[₹$])?([^\s-]*)\s*(?:-\s*(.*))?/;
       const match = h.match(regex);
       if (match) {
         const category = match[2] ? match[2].trim() : 'Signature';
@@ -39,12 +46,17 @@ const RestaurantDetail = () => {
           name: match[1].trim(),
           category: category.charAt(0).toUpperCase() + category.slice(1),
           price: match[3].trim(),
+          description: match[4] ? match[4].trim() : '',
           isVeg,
           isChefSpecial: lowerName.includes('truffle') || lowerName.includes('special') || lowerName.includes('decadence') || lowerName.includes('martini')
         };
       }
-      return { name: h.trim(), category: 'Signature', price: '', isVeg: true, isChefSpecial: false };
+      return { name: h.trim(), category: 'Signature', price: '', description: '', isVeg: true, isChefSpecial: false };
     });
+  }, [restaurant?.menuHighlights]);
+
+  const hasCulinaryMenu = useMemo(() => {
+    return !!(restaurant?.menuHighlights && restaurant.menuHighlights.includes(':'));
   }, [restaurant?.menuHighlights]);
 
   const categories = useMemo(() => {
@@ -270,7 +282,7 @@ const RestaurantDetail = () => {
             </section>
 
             {/* Culinary Menu Card Option */}
-            {menuItems.length > 0 && (
+            {restaurant && (
               <section className="bg-cream-50/30 p-6 rounded-2xl border border-gold-500/15 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-gold-500/30 transition-all duration-300">
                 <div>
                   <h3 className="font-serif font-bold text-brown-900 text-xl flex items-center gap-2">
@@ -450,73 +462,84 @@ const RestaurantDetail = () => {
 
                     {/* Modal Body - Scrollable Dishes Grid */}
                     <div className="p-6 overflow-y-auto max-h-[50vh] space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {filteredItems.map((dish) => {
-                          const isSelected = selectedDishes.some(d => d.name === dish.name);
-                          const isFav = favorites.includes(dish.name);
-                          
-                          return (
-                            <div
-                              key={dish.name}
-                              className={`p-4 rounded-xl border transition-all duration-300 flex flex-col justify-between relative overflow-hidden ${
-                                isSelected
-                                  ? 'bg-gold-50/40 border-gold-500'
-                                  : 'bg-cream-50/10 border-gold-500/10 hover:border-gold-500/25'
-                              }`}
-                            >
-                              <div className="flex justify-between items-start gap-2 mb-2">
-                                <div className="flex flex-wrap gap-1.5 items-center">
-                                  <span className={`inline-flex items-center gap-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full ${
-                                    dish.isVeg ? 'text-green-700 bg-green-500/10' : 'text-red-700 bg-red-500/10'
-                                  }`}>
-                                    <span className={`w-1 h-1 rounded-full ${dish.isVeg ? 'bg-green-600' : 'bg-red-600'}`} />
-                                    {dish.isVeg ? 'VEG' : 'NON-VEG'}
-                                  </span>
-                                  <span className="text-[8px] uppercase font-bold tracking-wider text-brown-600 bg-brown-500/10 px-1.5 py-0.5 rounded-full">
-                                    {dish.category}
-                                  </span>
-                                  {dish.isChefSpecial && (
-                                    <span className="text-[8px] font-bold tracking-wider text-gold-700 bg-gold-500/10 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                                      <Sparkles size={8} className="fill-gold-500" /> SPECIAL
-                                    </span>
-                                  )}
-                                </div>
-                                <button 
-                                  onClick={() => toggleFavorite(dish.name)}
-                                  className="text-brown-400 hover:text-red-500 transition-colors p-0.5"
-                                >
-                                  <Heart size={14} className={isFav ? 'fill-red-500 text-red-500' : ''} />
-                                </button>
-                              </div>
-
-                              <h4 className="font-serif font-bold text-brown-900 text-base leading-tight">
-                                {dish.name}
-                              </h4>
-
-                              <div className="mt-4 flex justify-between items-center pt-2 border-t border-gold-500/5">
-                                <span className="text-gold-600 font-bold text-base">
-                                  {dish.price ? (dish.price.startsWith('₹') ? dish.price : `₹${dish.price}`) : 'Price on Ask'}
-                                </span>
-                                <button
-                                  onClick={() => toggleSelectDish(dish)}
-                                  className={`px-2.5 py-1 rounded text-[10px] font-bold flex items-center gap-0.5 transition-all ${
+                      {menuItems.length === 0 ? (
+                        <div className="py-16 text-center text-brown-700/60 italic text-sm">
+                          No menu items configured yet. Owners can upload a menu photo from the Admin Dashboard.
+                        </div>
+                      ) : (
+                        <>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {filteredItems.map((dish) => {
+                              const isSelected = selectedDishes.some(d => d.name === dish.name);
+                              const isFav = favorites.includes(dish.name);
+                              
+                              return (
+                                <div
+                                  key={dish.name}
+                                  className={`p-4 rounded-xl border transition-all duration-300 flex flex-col justify-between relative overflow-hidden ${
                                     isSelected
-                                      ? 'bg-gold-500 text-brown-900'
-                                      : 'bg-brown-900 text-cream-100 hover:bg-gold-500 hover:text-brown-900'
+                                      ? 'bg-gold-50/40 border-gold-500'
+                                      : 'bg-cream-50/10 border-gold-500/10 hover:border-gold-500/25'
                                   }`}
                                 >
-                                  {isSelected ? <><Check size={10} strokeWidth={3} /> Selected</> : <>+ Pre-Order</>}
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                                  <div className="flex justify-between items-start gap-2 mb-2">
+                                    <div className="flex flex-wrap gap-1.5 items-center">
+                                      <span className={`inline-flex items-center gap-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full ${
+                                        dish.isVeg ? 'text-green-700 bg-green-500/10' : 'text-red-700 bg-red-500/10'
+                                      }`}>
+                                        <span className={`w-1 h-1 rounded-full ${dish.isVeg ? 'bg-green-600' : 'bg-red-600'}`} />
+                                        {dish.isVeg ? 'VEG' : 'NON-VEG'}
+                                      </span>
+                                      <span className="text-[8px] uppercase font-bold tracking-wider text-brown-600 bg-brown-500/10 px-1.5 py-0.5 rounded-full">
+                                        {dish.category}
+                                      </span>
+                                      {dish.isChefSpecial && (
+                                        <span className="text-[8px] font-bold tracking-wider text-gold-700 bg-gold-500/10 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                                          <Sparkles size={8} className="fill-gold-500" /> SPECIAL
+                                        </span>
+                                      )}
+                                    </div>
+                                    <button 
+                                      onClick={() => toggleFavorite(dish.name)}
+                                      className="text-brown-400 hover:text-red-500 transition-colors p-0.5"
+                                    >
+                                      <Heart size={14} className={isFav ? 'fill-red-500 text-red-500' : ''} />
+                                    </button>
+                                  </div>
 
-                      {filteredItems.length === 0 && (
-                        <div className="py-12 text-center text-brown-500 italic text-sm">
-                          No dishes found matching your search.
-                        </div>
+                                  <h4 className="font-serif font-bold text-brown-900 text-base leading-tight">
+                                    {dish.name}
+                                  </h4>
+                                  {dish.description && (
+                                    <p className="text-xs text-brown-700/60 mt-1 leading-relaxed">{dish.description}</p>
+                                  )}
+
+                                  <div className="mt-4 flex justify-between items-center pt-2 border-t border-gold-500/5">
+                                    <span className="text-gold-600 font-bold text-base">
+                                      {dish.price ? (dish.price.startsWith('₹') ? dish.price : `₹${dish.price}`) : 'Price on Ask'}
+                                    </span>
+                                    <button
+                                      onClick={() => toggleSelectDish(dish)}
+                                      className={`px-2.5 py-1 rounded text-[10px] font-bold flex items-center gap-0.5 transition-all ${
+                                        isSelected
+                                          ? 'bg-gold-500 text-brown-900'
+                                          : 'bg-brown-900 text-cream-100 hover:bg-gold-500 hover:text-brown-900'
+                                      }`}
+                                    >
+                                      {isSelected ? <><Check size={10} strokeWidth={3} /> Selected</> : <>+ Pre-Order</>}
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {filteredItems.length === 0 && (
+                            <div className="py-12 text-center text-brown-500 italic text-sm">
+                              No dishes found matching your search.
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
 

@@ -15,6 +15,34 @@ import AddRestaurantForm from '../components/admin/AddRestaurantForm';
 import EditRestaurantForm from '../components/admin/EditRestaurantForm';
 import TableManagementTab from '../components/admin/TableManagementTab';
 
+// Helper to parse complex special requests containing pre-orders
+const parseSpecialRequest = (reqStr) => {
+  if (!reqStr) return null;
+  if (!reqStr.includes('[Pre-Order:') && !reqStr.includes('[Manual Pre-Order:') && !reqStr.includes('[Request:')) {
+    return { preOrder: '', manualPreOrder: '', request: reqStr };
+  }
+
+  const parts = reqStr.split(' | ');
+  let preOrder = '';
+  let manualPreOrder = '';
+  let request = '';
+
+  parts.forEach(part => {
+    if (part.startsWith('[Pre-Order: ') && part.endsWith(']')) {
+      preOrder = part.slice(12, -1);
+    } else if (part.startsWith('[Manual Pre-Order: ') && part.endsWith(']')) {
+      manualPreOrder = part.slice(19, -1);
+    } else if (part.startsWith('[Request: ') && part.endsWith(']')) {
+      request = part.slice(9, -1);
+    } else {
+      if (request) request += ' | ' + part;
+      else request = part;
+    }
+  });
+
+  return { preOrder, manualPreOrder, request };
+};
+
 const MOCK_RESTAURANTS = [
   {
     id: "demo-res-1",
@@ -1002,7 +1030,35 @@ const AdminDashboard = () => {
 
                             return (
                               <tr key={b.id} className="hover:bg-cream-50/50 transition-colors">
-                                <td className="px-4 py-4 font-bold text-brown-950">{b.user?.name || 'Guest'}</td>
+                                <td className="px-4 py-4 text-brown-950">
+                                  <div className="font-bold">{b.user?.name || 'Guest'}</div>
+                                  {b.specialRequest && (() => {
+                                    const parsed = parseSpecialRequest(b.specialRequest);
+                                    if (!parsed) return null;
+                                    return (
+                                      <div className="mt-1.5 space-y-1 font-normal text-[10px] text-stone-500 max-w-[200px]">
+                                        {parsed.preOrder && (
+                                          <div className="flex gap-1 items-start bg-gold-50 border border-gold-500/10 p-1 rounded">
+                                            <span className="text-[7px] bg-gold-500/20 text-gold-800 px-1 rounded font-bold shrink-0">PRE-ORDER</span>
+                                            <span className="truncate" title={parsed.preOrder}>{parsed.preOrder}</span>
+                                          </div>
+                                        )}
+                                        {parsed.manualPreOrder && (
+                                          <div className="flex gap-1 items-start bg-amber-50 border border-amber-500/10 p-1 rounded">
+                                            <span className="text-[7px] bg-amber-500/20 text-amber-800 px-1 rounded font-bold shrink-0">MANUAL PO</span>
+                                            <span className="truncate" title={parsed.manualPreOrder}>{parsed.manualPreOrder}</span>
+                                          </div>
+                                        )}
+                                        {parsed.request && (
+                                          <div className="flex gap-1 items-start bg-brown-50 border border-brown-500/10 p-1 rounded">
+                                            <span className="text-[7px] bg-brown-500/20 text-brown-800 px-1 rounded font-bold shrink-0">NOTE</span>
+                                            <span className="truncate" title={parsed.request}>{parsed.request}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
+                                </td>
                                 <td className="px-4 py-4">
                                   <div className="text-xs">{b.user?.email}</div>
                                   {b.user?.phone && <div className="text-[10px] text-brown-600/70">{b.user.phone}</div>}

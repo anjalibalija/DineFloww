@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
-import { Sparkles, Calendar, Clock, Users, ShieldCheck, CreditCard, IndianRupee, ZoomIn, ZoomOut, RotateCcw, RotateCw, RefreshCw, Eye, Heart, Briefcase, Wine, HelpCircle, AlertCircle, Check, Trash2, Compass, ArrowLeft } from 'lucide-react';
+import { Sparkles, Calendar, Clock, Users, ShieldCheck, CreditCard, IndianRupee, ZoomIn, ZoomOut, RotateCcw, RotateCw, RefreshCw, Eye, Heart, Briefcase, Wine, HelpCircle, AlertCircle, Check, Trash2, Compass, ArrowLeft, Utensils, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
@@ -108,8 +108,63 @@ const TableBlueprintPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const preOrder = location.state?.preOrder || [];
+  const [selectedDishes, setSelectedDishes] = useState(location.state?.preOrder || []);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('All');
   const { user } = useAuth();
+
+  const menuItems = useMemo(() => {
+    if (!restaurant?.menuHighlights) return [];
+    const hasNewlines = restaurant.menuHighlights.includes('\n');
+    const itemsList = hasNewlines
+      ? restaurant.menuHighlights.split('\n').map(h => h.trim()).filter(Boolean)
+      : restaurant.menuHighlights.split(',').map(h => h.trim()).filter(Boolean);
+
+    return itemsList.map(h => {
+      const regex = /(.*?)(?:\((.*?)\))?:\s*(?:[₹$])?([^\s-]*)\s*(?:-\s*(.*))?/;
+      const match = h.match(regex);
+      if (match) {
+        const category = match[2] ? match[2].trim() : 'Signature';
+        const lowerName = match[1].toLowerCase();
+        const isVeg = !lowerName.includes('chicken') && !lowerName.includes('salmon') && !lowerName.includes('fish') && !lowerName.includes('mutton') && !lowerName.includes('meat') && !lowerName.includes('egg') && !lowerName.includes('pepperoni') && !lowerName.includes('bacon');
+        return {
+          name: match[1].trim(),
+          category: category.charAt(0).toUpperCase() + category.slice(1),
+          price: match[3].trim(),
+          description: match[4] ? match[4].trim() : '',
+          isVeg,
+          isChefSpecial: lowerName.includes('truffle') || lowerName.includes('special') || lowerName.includes('decadence') || lowerName.includes('martini')
+        };
+      }
+      return { name: h.trim(), category: 'Signature', price: '', description: '', isVeg: true, isChefSpecial: false };
+    });
+  }, [restaurant?.menuHighlights]);
+
+  const categories = useMemo(() => {
+    const cats = new Set(menuItems.map(item => item.category));
+    return ['All', ...Array.from(cats)];
+  }, [menuItems]);
+
+  const filteredItems = useMemo(() => {
+    return menuItems.filter(item => {
+      const matchesTab = activeTab === 'All' || item.category === activeTab;
+      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            item.category.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesTab && matchesSearch;
+    });
+  }, [menuItems, activeTab, searchQuery]);
+
+  const toggleSelectDish = (dish) => {
+    setSelectedDishes(prev => {
+      const exists = prev.find(d => d.name === dish.name);
+      if (exists) {
+        return prev.filter(d => d.name !== dish.name);
+      } else {
+        return [...prev, dish];
+      }
+    });
+  };
 
   const getTodayDateString = () => {
     const today = new Date();
@@ -138,6 +193,7 @@ const TableBlueprintPage = () => {
   const [time, setTime] = useState(getSensibleDefaultTime());
   const [guests, setGuests] = useState(2);
   const [request, setRequest] = useState('');
+  const [manualPreOrder, setManualPreOrder] = useState('');
   const [bookingError, setBookingError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
@@ -546,9 +602,11 @@ const TableBlueprintPage = () => {
               bookingDate: date,
               bookingTime: time,
               peopleCount: guests,
-              specialRequest: preOrder.length > 0 
-                ? `[Pre-Order: ${preOrder.map(d => `${d.name} (${d.price})`).join(', ')}]${request ? ` | Request: ${request}` : ''}`
-                : request
+              specialRequest: [
+                selectedDishes.length > 0 ? `[Pre-Order: ${selectedDishes.map(d => `${d.name} (${d.price})`).join(', ')}]` : '',
+                manualPreOrder ? `[Manual Pre-Order: ${manualPreOrder}]` : '',
+                request ? `[Request: ${request}]` : ''
+              ].filter(Boolean).join(' | ')
             });
             setPaymentSuccess(true);
             setTimeout(() => navigate('/dashboard'), 2500);
@@ -1649,17 +1707,28 @@ const TableBlueprintPage = () => {
                 </div>
 
                 {/* Pre-Order Summary */}
-                {preOrder.length > 0 && (
-                  <div className="p-3 bg-gold-50/30 rounded-xl border border-gold-500/10 space-y-1">
-                    <h5 className="text-[10px] font-bold text-brown-900 uppercase tracking-wider flex items-center gap-1.5">
-                      <Wine size={12} className="text-gold-600" />
-                      Pre-Ordered Menu Items
-                    </h5>
-                    <div className="space-y-1">
-                      {preOrder.map((dish, idx) => (
+                {selectedDishes.length > 0 && (
+                  <div className="p-3 bg-gold-50/30 rounded-xl border border-gold-500/10 space-y-1 text-left">
+                    <div className="flex justify-between items-center">
+                      <h5 className="text-[10px] font-bold text-brown-900 uppercase tracking-wider flex items-center gap-1.5">
+                        <Wine size={12} className="text-gold-600" />
+                        Selected Culinary Pre-Order
+                      </h5>
+                      <button 
+                        type="button"
+                        onClick={() => setSelectedDishes([])}
+                        className="text-[9px] text-red-500 hover:underline flex items-center gap-0.5"
+                      >
+                        <Trash2 size={10} /> Clear
+                      </button>
+                    </div>
+                    <div className="space-y-1 mt-1">
+                      {selectedDishes.map((dish, idx) => (
                         <div key={idx} className="flex justify-between text-xs text-brown-800">
-                          <span>{dish.name}</span>
-                          <span className="font-semibold text-brown-950">₹{dish.price}</span>
+                          <span>• {dish.name}</span>
+                          <span className="font-semibold text-brown-950">
+                            {dish.price ? (dish.price.startsWith('₹') ? dish.price : `₹${dish.price}`) : 'Ask'}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -1668,7 +1737,7 @@ const TableBlueprintPage = () => {
 
                 {/* Booking Summary details (Simplified to Reservation Schedule) */}
                 <div className="p-4 bg-brown-50/20 rounded-2xl border border-gold-500/10 space-y-2">
-                  <h4 className="text-xs font-bold text-brown-900 uppercase tracking-wider flex items-center gap-1.5 mb-1">
+                  <h4 className="text-xs font-bold text-[#2C1B18] uppercase tracking-wider flex items-center gap-1.5 mb-1">
                     <Calendar size={12} className="text-gold-600" />
                     Reservation Schedule
                   </h4>
@@ -1691,7 +1760,23 @@ const TableBlueprintPage = () => {
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-brown-900 mb-1">Special Requests (Optional)</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-xs font-semibold text-brown-700/60 uppercase tracking-wider">Pre-Order Dishes (Optional)</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsMenuOpen(true)}
+                      className="text-[10px] font-bold text-gold-600 hover:text-gold-500 flex items-center gap-1 cursor-pointer bg-transparent border-0"
+                    >
+                      <Utensils size={10} /> Browse Culinary Menu
+                    </button>
+                  </div>
+                  <textarea rows="2" value={manualPreOrder} onChange={e => setManualPreOrder(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-[#e7ddcd] rounded-xl focus:ring-2 focus:ring-gold-500/30 focus:border-gold-500 outline-none resize-none text-sm text-brown-900 font-semibold bg-white mb-3"
+                    placeholder="Enter dishes you would like to pre-order (e.g. 1x Paneer Tikka, 2x Roti)..." />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-brown-700/60 uppercase tracking-wider mb-1">Special Requests (Optional)</label>
                   <textarea rows="2" value={request} onChange={e => setRequest(e.target.value)}
                     className="w-full px-4 py-2.5 border border-[#e7ddcd] rounded-xl focus:ring-2 focus:ring-gold-500/30 focus:border-gold-500 outline-none resize-none text-sm text-brown-900 font-semibold bg-white"
                     placeholder="Allergies, anniversary, window seat preference..." />
@@ -1776,6 +1861,164 @@ const TableBlueprintPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Premium Culinary Menu Modal */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.3 }}
+              className="bg-white max-w-4xl w-full max-h-[85vh] overflow-hidden rounded-3xl border border-gold-500/20 shadow-2xl flex flex-col"
+            >
+              {/* Modal Header */}
+              <div className="p-6 border-b border-gold-500/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-cream-50/20 text-left">
+                <div>
+                  <span className="text-xs uppercase font-bold tracking-wider text-gold-600">Menu Highlights</span>
+                  <h3 className="text-2xl font-serif font-bold text-brown-900 mt-0.5">{restaurant?.name || 'Restaurant'} Menu</h3>
+                </div>
+                
+                {/* Search & Close */}
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <div className="relative flex-grow sm:flex-grow-0 sm:w-60">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brown-400" />
+                    <input
+                      type="text"
+                      placeholder="Search dishes..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      autoComplete="one-time-code"
+                      className="w-full pl-8 pr-4 py-1.5 rounded-full border border-gold-500/20 bg-white text-xs text-brown-900 focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500 transition-all"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="bg-brown-900 text-[#f5efe4] px-4 py-1.5 rounded-full text-xs font-bold hover:bg-gold-500 hover:text-brown-900 transition-all"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+
+              {/* Category Tabs inside Modal */}
+              {categories.length > 2 && (
+                <div className="px-6 py-3 border-b border-gold-500/5 bg-cream-50/10 flex gap-2 overflow-x-auto scrollbar-none">
+                  {categories.map((cat, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setActiveTab(cat)}
+                      className={`px-4 py-1 rounded-full text-[11px] font-semibold tracking-wider transition-all duration-300 shrink-0 ${
+                        activeTab === cat
+                          ? 'bg-brown-900 text-gold-500 shadow-sm'
+                          : 'bg-cream-50/50 hover:bg-cream-100/50 text-brown-700 border border-gold-500/10'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Modal Body - Scrollable Dishes Grid */}
+              <div className="p-6 overflow-y-auto max-h-[50vh] space-y-4 text-left">
+                {menuItems.length === 0 ? (
+                  <div className="py-16 text-center text-brown-700/60 italic text-sm">
+                    No menu items configured yet. Owners can upload a menu photo from the Admin Dashboard.
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {filteredItems.map((dish) => {
+                        const isSelected = selectedDishes.some(d => d.name === dish.name);
+                        
+                        return (
+                          <div
+                            key={dish.name}
+                            className={`p-4 rounded-xl border transition-all duration-300 flex flex-col justify-between relative overflow-hidden ${
+                              isSelected
+                                ? 'bg-gold-50/40 border-gold-500'
+                                : 'bg-cream-50/10 border-gold-500/10 hover:border-gold-500/25'
+                            }`}
+                          >
+                            <div className="flex justify-between items-start gap-2 mb-2">
+                              <div className="flex flex-wrap gap-1.5 items-center">
+                                <span className={`inline-flex items-center gap-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full ${
+                                  dish.isVeg ? 'text-green-700 bg-green-500/10' : 'text-red-700 bg-red-500/10'
+                                }`}>
+                                  <span className={`w-1 h-1 rounded-full ${dish.isVeg ? 'bg-green-600' : 'bg-red-600'}`} />
+                                  {dish.isVeg ? 'VEG' : 'NON-VEG'}
+                                </span>
+                                <span className="text-[8px] uppercase font-bold tracking-wider text-brown-600 bg-brown-500/10 px-1.5 py-0.5 rounded-full">
+                                  {dish.category}
+                                </span>
+                                {dish.isChefSpecial && (
+                                  <span className="text-[8px] font-bold tracking-wider text-gold-700 bg-gold-500/10 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                                    <Sparkles size={8} className="fill-gold-500" /> SPECIAL
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <h4 className="font-serif font-bold text-brown-900 text-base leading-tight">
+                              {dish.name}
+                            </h4>
+                            {dish.description && (
+                              <p className="text-xs text-brown-700/60 mt-1 leading-relaxed">{dish.description}</p>
+                            )}
+
+                            <div className="mt-4 flex justify-between items-center pt-2 border-t border-gold-500/5">
+                              <span className="text-gold-600 font-bold text-base">
+                                {dish.price ? (dish.price.startsWith('₹') ? dish.price : `₹${dish.price}`) : 'Price on Ask'}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => toggleSelectDish(dish)}
+                                className={`px-2.5 py-1 rounded text-[10px] font-bold flex items-center gap-0.5 transition-all ${
+                                  isSelected
+                                    ? 'bg-gold-500 text-brown-900'
+                                    : 'bg-brown-900 text-cream-100 hover:bg-gold-500 hover:text-brown-900'
+                                }`}
+                              >
+                                {isSelected ? <><Check size={10} strokeWidth={3} /> Selected</> : <>+ Pre-Order</>}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {filteredItems.length === 0 && (
+                      <div className="py-12 text-center text-brown-500 italic text-sm">
+                        No dishes found matching your search.
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 border-t border-gold-500/10 bg-cream-50/10 flex justify-between items-center text-xs">
+                <span className="text-brown-600">
+                  {selectedDishes.length > 0 
+                    ? `${selectedDishes.length} item(s) selected for pre-order` 
+                    : 'Select items to add to your pre-order request'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="bg-brown-900 text-gold-500 px-5 py-2 rounded-full font-bold hover:bg-gold-500 hover:text-brown-900 transition-all"
+                >
+                  Done
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

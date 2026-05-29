@@ -10,6 +10,34 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 
+// Helper to parse complex special requests containing pre-orders
+const parseSpecialRequest = (reqStr) => {
+  if (!reqStr) return null;
+  if (!reqStr.includes('[Pre-Order:') && !reqStr.includes('[Manual Pre-Order:') && !reqStr.includes('[Request:')) {
+    return { preOrder: '', manualPreOrder: '', request: reqStr };
+  }
+
+  const parts = reqStr.split(' | ');
+  let preOrder = '';
+  let manualPreOrder = '';
+  let request = '';
+
+  parts.forEach(part => {
+    if (part.startsWith('[Pre-Order: ') && part.endsWith(']')) {
+      preOrder = part.slice(12, -1);
+    } else if (part.startsWith('[Manual Pre-Order: ') && part.endsWith(']')) {
+      manualPreOrder = part.slice(19, -1);
+    } else if (part.startsWith('[Request: ') && part.endsWith(']')) {
+      request = part.slice(9, -1);
+    } else {
+      if (request) request += ' | ' + part;
+      else request = part;
+    }
+  });
+
+  return { preOrder, manualPreOrder, request };
+};
+
 // Mock Data Sets for Demo Simulation Mode
 const MOCK_BOOKINGS = [
   {
@@ -25,7 +53,7 @@ const MOCK_BOOKINGS = [
     occasion: "Romantic Date",
     status: "Confirmed",
     bookingFee: "₹250",
-    specialRequest: "Need a quiet window table for anniversary dinner.",
+    specialRequest: "[Request: Need a quiet window table for anniversary dinner.]",
     paymentId: "pay_mock_99210",
     createdAt: "2026-05-28T14:30:00Z"
   },
@@ -42,7 +70,7 @@ const MOCK_BOOKINGS = [
     occasion: "Business Dinner",
     status: "Confirmed",
     bookingFee: "₹500",
-    specialRequest: "Presentation screen requested.",
+    specialRequest: "[Request: Presentation screen requested.]",
     paymentId: "pay_mock_99211",
     createdAt: "2026-05-29T10:15:00Z"
   },
@@ -59,7 +87,7 @@ const MOCK_BOOKINGS = [
     occasion: "Casual Dining",
     status: "Completed",
     bookingFee: "₹250",
-    specialRequest: "Vegetarian pre-orders added.",
+    specialRequest: "[Pre-Order: Veg Biryani (450), Paneer Tikka (320)] | [Manual Pre-Order: Extra spicy] | [Request: Vegetarian pre-orders added.]",
     paymentId: "pay_mock_99182",
     createdAt: "2026-05-20T12:00:00Z"
   },
@@ -1244,11 +1272,32 @@ const Dashboard = () => {
                               </div>
                             </div>
 
-                            {booking.specialRequest && (
-                              <p className="text-[10px] text-stone-400 italic line-clamp-1">
-                                " {booking.specialRequest} "
-                              </p>
-                            )}
+                            {booking.specialRequest && (() => {
+                              const parsed = parseSpecialRequest(booking.specialRequest);
+                              if (!parsed) return null;
+                              return (
+                                <div className="space-y-1 mt-1 bg-[#FAF6EE]/50 p-2.5 rounded-xl border border-[#D4AF37]/10 text-left">
+                                  {parsed.preOrder && (
+                                    <div className="flex items-start gap-1.5 text-[10px]">
+                                      <span className="font-bold text-[#b58c28] shrink-0 uppercase tracking-wider text-[8px] mt-0.5 bg-[#D4AF37]/10 px-1 py-0.5 rounded">Pre-Order</span>
+                                      <span className="text-stone-600 font-semibold">{parsed.preOrder}</span>
+                                    </div>
+                                  )}
+                                  {parsed.manualPreOrder && (
+                                    <div className="flex items-start gap-1.5 text-[10px]">
+                                      <span className="font-bold text-amber-700 shrink-0 uppercase tracking-wider text-[8px] mt-0.5 bg-amber-500/10 px-1 py-0.5 rounded">Manual Pre-Order</span>
+                                      <span className="text-stone-600 font-semibold">{parsed.manualPreOrder}</span>
+                                    </div>
+                                  )}
+                                  {parsed.request && (
+                                    <div className="flex items-start gap-1.5 text-[10px]">
+                                      <span className="font-bold text-stone-700 shrink-0 uppercase tracking-wider text-[8px] mt-0.5 bg-stone-500/10 px-1 py-0.5 rounded">Note</span>
+                                      <span className="text-stone-600 italic">"{parsed.request}"</span>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
 
                             <div className="flex justify-between items-center pt-2 border-t border-[#FAF6EE] mt-auto">
                               <span className="text-[9px] text-[#C5A880] font-mono">
@@ -1872,6 +1921,29 @@ const Dashboard = () => {
                     <span className="font-bold text-white block mt-0.5">{digitalPassBooking.time || digitalPassBooking.bookingTime}</span>
                   </div>
                 </div>
+
+                {/* Pre-Order Details on Ticket */}
+                {digitalPassBooking.specialRequest && (() => {
+                  const parsed = parseSpecialRequest(digitalPassBooking.specialRequest);
+                  if (!parsed || (!parsed.preOrder && !parsed.manualPreOrder)) return null;
+                  return (
+                    <div className="text-left bg-white/5 border border-[#D4AF37]/20 p-4 rounded-2xl text-xs font-sans space-y-2">
+                      <span className="text-[8px] text-[#D4AF37] uppercase tracking-wide block font-bold">PRE-ORDER SELECTIONS</span>
+                      {parsed.preOrder && (
+                        <p className="text-stone-300 font-medium leading-relaxed flex items-start gap-1.5">
+                          <span className="shrink-0 text-gold-500">🍽️</span>
+                          <span>{parsed.preOrder}</span>
+                        </p>
+                      )}
+                      {parsed.manualPreOrder && (
+                        <p className="text-stone-300 font-medium leading-relaxed flex items-start gap-1.5">
+                          <span className="shrink-0 text-amber-500">✍️</span>
+                          <span>{parsed.manualPreOrder}</span>
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Barcode representation */}
                 <div className="space-y-1.5">

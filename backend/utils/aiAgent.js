@@ -184,18 +184,10 @@ exports.digitizeMenuImage = async (base64Data, mimeType) => {
       const cleanText = text.replace(/```json/gi, '').replace(/```/g, '').trim();
       return JSON.parse(cleanText);
     } catch (err) {
-      console.error('Gemini Menu vision digitization failed:', err.message);
-      throw new Error(`Gemini AI service failed: ${err.message}`);
+      console.warn('Gemini Menu vision digitization failed:', err.message);
+      throw new Error(`AI Menu Digitizer failed: ${err.message}`);
     }
   }
 
-  // Simulated fallback parser (returns a beautiful, relevant sample food menu)
-  return [
-    { name: "Classic Bruschetta", description: "Grilled bread rubbed with garlic, topped with tomatoes, olive oil and basil", price: 290, category: "Appetizers" },
-    { name: "Truffle Fries", description: "Crispy skin-on fries tossed in white truffle oil and grated parmesan", price: 350, category: "Appetizers" },
-    { name: "Margherita Pizza", description: "Fresh mozzarella, san marzano tomato sauce, fresh basil, extra virgin olive oil", price: 490, category: "Mains" },
-    { name: "Wild Mushroom Risotto", description: "Creamy arborio rice with porcini and oyster mushrooms, finished with parmesan", price: 580, category: "Mains" },
-    { name: "Chocolate Decadence", description: "Flourless dark chocolate cake served with fresh raspberry coulis", price: 320, category: "Desserts" },
-    { name: "Espresso Martini", description: "Vodka, fresh espresso, coffee liqueur, and coffee beans", price: 420, category: "Drinks" }
-  ];
+  throw new Error('Gemini API key is not configured.');
 };
