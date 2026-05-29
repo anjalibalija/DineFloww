@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import axios from 'axios';
 import { Star, MapPin, Users, Search, Navigation, X, SlidersHorizontal, ChevronDown, Grid, Map, Sparkles } from 'lucide-react';
@@ -62,6 +62,105 @@ const expandQuery = (query) => {
 
 
 
+const MOCK_RESTAURANTS = [
+  {
+    id: "res-olive-bistro",
+    name: "Olive Bistro",
+    cuisine: "Italian",
+    location: "Indiranagar, Bengaluru",
+    rating: 4.8,
+    image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
+    priceRange: "₹₹₹",
+    priceTier: "Premium",
+    openingTime: "11:00 AM",
+    closingTime: "11:00 PM",
+    latitude: 12.97189,
+    longitude: 77.64115,
+    description: "An elegant, candlelit sanctuary offering wood-fired pizzas, hand-rolled pasta, and curated fine wines in a romantic Mediterranean setting.",
+    crowdLevel: "Medium",
+  },
+  {
+    id: "res-spice-route",
+    name: "Spice Route",
+    cuisine: "Indian",
+    location: "Koramangala, Bengaluru",
+    rating: 4.9,
+    image: "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=800&q=80",
+    priceRange: "₹₹₹₹",
+    priceTier: "Fine Dining",
+    openingTime: "12:00 PM",
+    closingTime: "11:30 PM",
+    latitude: 12.93519,
+    longitude: 77.62448,
+    description: "Embark on an authentic culinary journey with rich Mughal curries, slow-cooked Awadhi biryanis, and saffron-infused desserts.",
+    crowdLevel: "High",
+  },
+  {
+    id: "res-bella-italia",
+    name: "Bella Italia",
+    cuisine: "Italian",
+    location: "Lavelle Road, Bengaluru",
+    rating: 4.6,
+    image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80",
+    priceRange: "₹₹",
+    priceTier: "Moderate",
+    openingTime: "11:30 AM",
+    closingTime: "10:30 PM",
+    latitude: 12.97194,
+    longitude: 77.59714,
+    description: "A cozy family-owned trattoria serving rustic Italian favorites, fresh pestos, and artisan gelatos made from scratch.",
+    crowdLevel: "Low",
+  },
+  {
+    id: "res-kyoto-garden",
+    name: "Kyoto Garden",
+    cuisine: "Japanese",
+    rating: 4.7,
+    location: "Sadashivanagar, Bengaluru",
+    image: "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=800&q=80",
+    priceRange: "₹₹₹",
+    priceTier: "Premium",
+    openingTime: "12:30 PM",
+    closingTime: "10:30 PM",
+    latitude: 13.0068,
+    longitude: 77.5813,
+    description: "Immersive traditional Japanese dining with artfully crafted sashimi, hand-rolled sushi, and authentic teppanyaki tables.",
+    crowdLevel: "Medium",
+  },
+  {
+    id: "res-urban-tandoor",
+    name: "Urban Tandoor",
+    cuisine: "Indian",
+    rating: 4.5,
+    location: "Jayanagar, Bengaluru",
+    image: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=800&q=80",
+    priceRange: "₹₹",
+    priceTier: "Moderate",
+    openingTime: "12:00 PM",
+    closingTime: "11:00 PM",
+    latitude: 12.9299,
+    longitude: 77.5824,
+    description: "A vibrant modern space offering classic North Indian clay-oven specialties, rich tandoori platters, and fusion mocktails.",
+    crowdLevel: "High",
+  },
+  {
+    id: "res-coastal-kitchen",
+    name: "Coastal Kitchen",
+    cuisine: "Continental",
+    rating: 4.4,
+    location: "Whitefield, Bengaluru",
+    image: "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=800&q=80",
+    priceRange: "₹",
+    priceTier: "Budget",
+    openingTime: "10:00 AM",
+    closingTime: "10:00 PM",
+    latitude: 12.9698,
+    longitude: 77.7499,
+    description: "Casual ocean-breeze inspired bistro offering premium seafood grills, continental platters, and fresh organic salads.",
+    crowdLevel: "Low",
+  }
+];
+
 const RestaurantListing = () => {
   const { isAdmin } = useAuth();
 
@@ -71,8 +170,14 @@ const RestaurantListing = () => {
   }
 
   const [restaurants, setRestaurants] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [toastMsg, setToastMsg] = useState('');
+
+  const showToast = (msg) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(''), 4000);
+  };
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -96,20 +201,23 @@ const RestaurantListing = () => {
   const [priceFilter, setPriceFilter] = useState('All'); // 'All' | '1' | '2' | '3' | '4'
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'map' | 'split'
 
-  useEffect(() => {
-    const fetchRestaurants = async () => {
-      try {
-        const res = await axios.get('/api/restaurants');
-        setRestaurants(res.data.data || []);
-      } catch {
-        setError('Failed to fetch restaurants.');
-        setRestaurants([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchRestaurants();
+  const fetchRestaurants = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await axios.get('/api/restaurants');
+      setRestaurants(res.data.data || []);
+    } catch (err) {
+      setError('Failed to fetch restaurants.');
+      setRestaurants([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchRestaurants();
+  }, [fetchRestaurants]);
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -304,17 +412,22 @@ const RestaurantListing = () => {
 
   return (
     <div className="min-h-screen bg-cream-100/40 pb-16">
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toastMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: -20, x: '-50%' }}
+            className="fixed top-24 left-1/2 z-50 bg-[#2C1B18] text-[#D4AF37] border border-[#D4AF37]/30 px-6 py-3 rounded-full shadow-2xl flex items-center gap-2 text-sm font-semibold"
+          >
+            <Sparkles size={16} className="text-[#D4AF37]" />
+            {toastMsg}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Breadcrumb section */}
-      <div className="max-w-7xl mx-auto px-4 py-4 text-[11px] text-brown-700/60 font-sans flex items-center gap-1.5 tracking-wider uppercase">
-        <span>Home</span>
-        <span>/</span>
-        <span>India</span>
-        <span>/</span>
-        <span className="text-brown-800 font-bold">{locationQuery || 'All Cities'}</span>
-        <span>/</span>
-        <span className="text-gold-500 font-bold">Dining Out</span>
-      </div>
+
 
       {/* ── Search + Location Bar Container ── */}
       <div className="max-w-7xl mx-auto px-4 mb-8">
@@ -536,47 +649,20 @@ const RestaurantListing = () => {
       </div>
 
       {/* ── Title Banner ── */}
-      <div className="max-w-7xl mx-auto px-4 mb-2">
-        <h1 className="text-3xl md:text-4xl font-serif font-black text-brown-900 tracking-tight">
-          Dine-out Restaurants in {locationQuery || 'your city'}
-        </h1>
-        <p className="text-sm text-brown-700/60 font-sans mt-1">Explore fine dining options and book your table seamlessly.</p>
+      <div className="max-w-7xl mx-auto px-4 mb-2 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-serif font-black text-brown-900 tracking-tight">
+            Dine-out Restaurants in {locationQuery || 'your city'}
+          </h1>
+          <p className="text-sm text-brown-700/60 font-sans mt-1">Explore fine dining options and book your table seamlessly.</p>
+        </div>
+
+
       </div>
 
       {/* ── Filter Pills Row ── */}
       <div className="max-w-7xl mx-auto px-4 mb-8 flex flex-wrap items-center gap-2.5">
         
-        {/* Rating 4.0+ */}
-        <button
-          onClick={() => setRatingFilter(prev => !prev)}
-          className={`px-3 py-1.5 rounded-xl text-xs font-serif font-bold transition-all border flex items-center gap-1.5 cursor-pointer ${
-            ratingFilter
-              ? 'bg-brown-900 text-cream-100 border-brown-900 shadow-sm'
-              : 'bg-white text-brown-700 border-cream-200 hover:bg-cream-100/50'
-          }`}
-        >
-          <span>Rating: 4.0+</span>
-          {ratingFilter && <X size={10} />}
-        </button>
-
-        {/* Price filters */}
-        {['1', '2', '3', '4'].map((val) => (
-          <button
-            key={val}
-            onClick={() => setPriceFilter(prev => prev === val ? 'All' : val)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-serif font-bold transition-all border flex items-center gap-1.5 cursor-pointer ${
-              priceFilter === val
-                ? 'bg-brown-900 text-cream-100 border-brown-900 shadow-sm'
-                : 'bg-white text-brown-700 border-cream-200 hover:bg-cream-100/50'
-            }`}
-          >
-            <span>{val === '1' ? 'Budget' : val === '2' ? 'Moderate' : val === '3' ? 'Premium' : 'Fine Dining'}</span>
-            {priceFilter === val && <X size={10} />}
-          </button>
-        ))}
-
-        {/* Cuisines separator */}
-        <div className="h-4 w-[1px] bg-cream-200 mx-1"></div>
         <span className="text-xs font-bold text-brown-700/40 uppercase tracking-wider font-sans">Cuisine:</span>
 
         {cuisines.slice(0, 5).map(c => (
