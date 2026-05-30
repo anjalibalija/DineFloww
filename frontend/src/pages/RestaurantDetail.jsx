@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import { Star, MapPin, Users, BrainCircuit, Clock, Utensils, Search, Sparkles, Heart, Check, Trash2, IndianRupee, X, Gamepad2, Gift, Trophy, ArrowLeft } from 'lucide-react';
+import { Star, MapPin, Users, BrainCircuit, Clock, Utensils, Search, Sparkles, Heart, Check, Trash2, IndianRupee, X, Gamepad2, Gift, Trophy, ArrowLeft, Plus, Minus, ShoppingCart, ChevronUp, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import RestaurantMap from '../components/RestaurantMap';
 import { useAuth } from '../context/AuthContext';
@@ -18,10 +18,17 @@ const RestaurantDetail = () => {
   const [favorites, setFavorites] = useState([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [reviews, setReviews] = useState([]);
+  const [showCartDropdown, setShowCartDropdown] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [userRating, setUserRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(null);
   const [reviewComment, setReviewComment] = useState('');
+
+  useEffect(() => {
+    if (selectedDishes.length === 0) {
+      setShowCartDropdown(false);
+    }
+  }, [selectedDishes]);
 
   const menuItems = useMemo(() => {
     if (!restaurant?.menuHighlights) return [];
@@ -73,13 +80,17 @@ const RestaurantDetail = () => {
     });
   }, [menuItems, activeTab, searchQuery]);
 
-  const toggleSelectDish = (dish) => {
+  const updateDishQuantity = (dish, quantity) => {
     setSelectedDishes(prev => {
       const exists = prev.find(d => d.name === dish.name);
       if (exists) {
-        return prev.filter(d => d.name !== dish.name);
+        if (quantity <= 0) {
+          return prev.filter(d => d.name !== dish.name);
+        }
+        return prev.map(d => d.name === dish.name ? { ...d, quantity } : d);
       } else {
-        return [...prev, dish];
+        if (quantity <= 0) return prev;
+        return [...prev, { ...dish, quantity: quantity }];
       }
     });
   };
@@ -446,16 +457,40 @@ const RestaurantDetail = () => {
                                     <span className="text-gold-600 font-bold text-base">
                                       {dish.price ? (dish.price.startsWith('₹') ? dish.price : `₹${dish.price}`) : 'Price on Ask'}
                                     </span>
-                                    <button
-                                      onClick={() => toggleSelectDish(dish)}
-                                      className={`px-2.5 py-1 rounded text-[10px] font-bold flex items-center gap-0.5 transition-all ${
-                                        isSelected
-                                          ? 'bg-gold-500 text-brown-900'
-                                          : 'bg-brown-900 text-cream-100 hover:bg-gold-500 hover:text-brown-900'
-                                      }`}
-                                    >
-                                      {isSelected ? <><Check size={10} strokeWidth={3} /> Selected</> : <>+ Pre-Order</>}
-                                    </button>
+                                    {(() => {
+                                      const selectedDish = selectedDishes.find(d => d.name === dish.name);
+                                      const selectedQuantity = selectedDish ? (selectedDish.quantity || 1) : 0;
+                                      
+                                      return selectedQuantity > 0 ? (
+                                        <div className="flex items-center bg-brown-900 text-gold-500 rounded-lg overflow-hidden border border-gold-500/20 shadow-sm">
+                                          <button
+                                            type="button"
+                                            onClick={() => updateDishQuantity(dish, selectedQuantity - 1)}
+                                            className="px-2.5 py-1 text-xs font-bold hover:bg-white/10 active:scale-95 transition-all text-gold-500"
+                                          >
+                                            <Minus size={10} strokeWidth={3} />
+                                          </button>
+                                          <span className="px-1 text-xs font-bold text-cream-100 select-none min-w-[16px] text-center">
+                                            {selectedQuantity}
+                                          </span>
+                                          <button
+                                            type="button"
+                                            onClick={() => updateDishQuantity(dish, selectedQuantity + 1)}
+                                            className="px-2.5 py-1 text-xs font-bold hover:bg-white/10 active:scale-95 transition-all text-gold-500"
+                                          >
+                                            <Plus size={10} strokeWidth={3} />
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => updateDishQuantity(dish, 1)}
+                                          className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-brown-900 text-cream-100 hover:bg-gold-500 hover:text-brown-900 active:scale-95 transition-all shadow-sm"
+                                        >
+                                          + ADD
+                                        </button>
+                                      );
+                                    })()}
                                   </div>
                                 </div>
                               );
@@ -471,16 +506,106 @@ const RestaurantDetail = () => {
                       )}
                     </div>
 
+                    {/* Cart Dropdown / Drawer (Swiggy/Zomato style) */}
+                    <AnimatePresence>
+                      {showCartDropdown && selectedDishes.length > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="border-t border-gold-500/15 bg-cream-50/95 backdrop-blur-md max-h-[25vh] overflow-y-auto p-4 z-40 shadow-inner"
+                        >
+                          <div className="flex justify-between items-center mb-3">
+                            <h4 className="font-serif font-bold text-brown-900 text-sm flex items-center gap-1.5">
+                              <ShoppingCart size={14} className="text-gold-500" />
+                              Your Pre-Order Cart
+                            </h4>
+                            <button
+                              onClick={() => setSelectedDishes([])}
+                              className="text-[10px] text-red-500 hover:underline flex items-center gap-0.5 font-bold"
+                            >
+                              <Trash2 size={10} /> Clear Cart
+                            </button>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            {selectedDishes.map((dish) => {
+                              const itemPrice = parseFloat((dish.price || '').replace(/[^\d.]/g, '')) || 0;
+                              const itemSubtotal = itemPrice * (dish.quantity || 1);
+                              
+                              return (
+                                <div key={dish.name} className="flex justify-between items-center bg-white p-2 rounded-xl border border-gold-500/5 shadow-sm text-xs">
+                                  <div className="flex items-center gap-2">
+                                    <span className={`w-1.5 h-1.5 rounded-full ${dish.isVeg ? 'bg-green-600' : 'bg-red-600'}`} />
+                                    <span className="font-medium text-brown-900">{dish.name}</span>
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-4">
+                                    {/* Mini incrementer */}
+                                    <div className="flex items-center bg-brown-900 text-gold-500 rounded-md overflow-hidden border border-gold-500/10">
+                                      <button
+                                        type="button"
+                                        onClick={() => updateDishQuantity(dish, (dish.quantity || 1) - 1)}
+                                        className="px-1.5 py-0.5 text-[10px] font-bold hover:bg-white/10 text-gold-500"
+                                      >
+                                        -
+                                      </button>
+                                      <span className="px-1.5 text-[10px] font-bold text-cream-100 min-w-[12px] text-center font-sans">
+                                        {dish.quantity || 1}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => updateDishQuantity(dish, (dish.quantity || 1) + 1)}
+                                        className="px-1.5 py-0.5 text-[10px] font-bold hover:bg-white/10 text-gold-500"
+                                      >
+                                        +
+                                      </button>
+                                    </div>
+                                    
+                                    <span className="font-semibold text-gold-600 min-w-[60px] text-right">
+                                      {itemSubtotal > 0 ? `₹${itemSubtotal}` : 'Ask'}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
                     {/* Modal Footer */}
                     <div className="p-4 border-t border-gold-500/10 bg-cream-50/10 flex justify-between items-center text-xs">
-                      <span className="text-brown-600">
-                        {selectedDishes.length > 0 
-                          ? `${selectedDishes.length} item(s) selected for pre-order` 
-                          : 'Select items to add to your pre-order request'}
-                      </span>
+                      {(() => {
+                        const totalItemsCount = selectedDishes.reduce((sum, d) => sum + (d.quantity || 1), 0);
+                        const totalCartPrice = selectedDishes.reduce((sum, d) => {
+                          const priceNum = parseFloat((d.price || '').replace(/[^\d.]/g, '')) || 0;
+                          return sum + (priceNum * (d.quantity || 1));
+                        }, 0);
+                        
+                        return (
+                          <div className="flex items-center gap-2">
+                            <ShoppingCart className="text-gold-500" size={16} />
+                            <span className="text-brown-600 font-medium">
+                              {totalItemsCount > 0 
+                                ? `${totalItemsCount} item${totalItemsCount > 1 ? 's' : ''} ${totalCartPrice > 0 ? `(₹${totalCartPrice})` : ''}`
+                                : 'Select items to pre-order'}
+                            </span>
+                            {totalItemsCount > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setShowCartDropdown(!showCartDropdown)}
+                                className="text-gold-600 font-bold flex items-center gap-0.5 hover:underline ml-2 bg-transparent border-0 cursor-pointer text-[11px]"
+                              >
+                                View Cart {showCartDropdown ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })()}
                       <button
                         onClick={() => setIsMenuOpen(false)}
-                        className="bg-brown-900 text-gold-500 px-5 py-2 rounded-full font-bold hover:bg-gold-500 hover:text-brown-900 transition-all"
+                        className="bg-brown-900 text-gold-500 px-5 py-2 rounded-full font-bold hover:bg-gold-500 hover:text-brown-900 transition-all shadow-md active:scale-95"
                       >
                         Done
                       </button>
@@ -551,14 +676,18 @@ const RestaurantDetail = () => {
                     <Check size={14} /> Selected Pre-Order
                   </h4>
                   <ul className="space-y-1.5 text-xs">
-                    {selectedDishes.map((dish, idx) => (
-                      <li key={idx} className="flex justify-between items-center text-brown-800">
-                        <span className="truncate max-w-[150px]">• {dish.name}</span>
-                        <span className="font-semibold text-gold-600 shrink-0">
-                          {dish.price ? (dish.price.startsWith('₹') ? dish.price : `₹${dish.price}`) : 'Ask'}
-                        </span>
-                      </li>
-                    ))}
+                    {selectedDishes.map((dish, idx) => {
+                      const itemPrice = parseFloat((dish.price || '').replace(/[^\d.]/g, '')) || 0;
+                      const displayPrice = itemPrice > 0 ? `₹${itemPrice * (dish.quantity || 1)}` : (dish.price ? (dish.price.startsWith('₹') ? dish.price : `₹${dish.price}`) : 'Ask');
+                      return (
+                        <li key={idx} className="flex justify-between items-center text-brown-800">
+                          <span className="truncate max-w-[150px]" title={dish.name}>• {dish.name} {(dish.quantity || 1) > 1 ? `x${dish.quantity}` : ''}</span>
+                          <span className="font-semibold text-gold-600 shrink-0">
+                            {displayPrice}
+                          </span>
+                        </li>
+                      );
+                    })}
                   </ul>
                   <div className="mt-3 text-[10px] text-brown-600/70 border-t border-gold-500/10 pt-2 flex justify-between items-center">
                     <span>Pre-order ready upon arrival.</span>
