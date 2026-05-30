@@ -841,76 +841,14 @@ const TableBlueprintPage = () => {
           </div>
         </div>
 
+
         {/* Separator line inside header panel */}
         <div className="h-px bg-gold-500/10 my-4" />
 
-        {/* Row for Vibe Assistant and 3D Camera reset */}
+        {/* 3D Camera controls */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10 text-xs">
-          {/* Vibe Assistant shortcuts */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] uppercase font-black tracking-widest text-gold-500 flex items-center gap-1">
-              <Sparkles size={12} className="text-gold-500 animate-pulse" /> Vibe Match Finder:
-            </span>
-            <button 
-              type="button"
-              onClick={() => applyVibePreset('romantic')} 
-              className={`px-3 py-1.5 rounded-full border text-[11px] font-bold cursor-pointer transition-all duration-300 flex items-center gap-1.5 ${
-                selectedVibe === 'romantic'
-                  ? 'bg-gold-500 text-brown-900 border-gold-500 shadow-md shadow-gold-500/25'
-                  : 'bg-white/5 hover:bg-white/10 text-gold-100 border-gold-500/20'
-              }`}
-            >
-              <Heart size={11} className={selectedVibe === 'romantic' ? 'fill-current' : ''} /> Intimate Date
-            </button>
-            <button 
-              type="button"
-              onClick={() => applyVibePreset('scenic')} 
-              className={`px-3 py-1.5 rounded-full border text-[11px] font-bold cursor-pointer transition-all duration-300 flex items-center gap-1.5 ${
-                selectedVibe === 'scenic'
-                  ? 'bg-gold-500 text-brown-900 border-gold-500 shadow-md shadow-gold-500/25'
-                  : 'bg-white/5 hover:bg-white/10 text-gold-100 border-gold-500/20'
-              }`}
-            >
-              🌅 Skyline Window
-            </button>
-            <button 
-              type="button"
-              onClick={() => applyVibePreset('quiet')} 
-              className={`px-3 py-1.5 rounded-full border text-[11px] font-bold cursor-pointer transition-all duration-300 flex items-center gap-1.5 ${
-                selectedVibe === 'quiet'
-                  ? 'bg-gold-500 text-brown-900 border-gold-500 shadow-md shadow-gold-500/25'
-                  : 'bg-white/5 hover:bg-white/10 text-gold-100 border-gold-500/20'
-              }`}
-            >
-              <Briefcase size={11} /> Secluded Cabin
-            </button>
-            <button 
-              type="button"
-              onClick={() => applyVibePreset('social')} 
-              className={`px-3 py-1.5 rounded-full border text-[11px] font-bold cursor-pointer transition-all duration-300 flex items-center gap-1.5 ${
-                selectedVibe === 'social'
-                  ? 'bg-gold-500 text-brown-900 border-gold-500 shadow-md shadow-gold-500/25'
-                  : 'bg-white/5 hover:bg-white/10 text-gold-100 border-gold-500/20'
-              }`}
-            >
-              <Wine size={11} /> Social Bar
-            </button>
-            <button 
-              type="button"
-              onClick={() => applyVibePreset('family')} 
-              className={`px-3 py-1.5 rounded-full border text-[11px] font-bold cursor-pointer transition-all duration-300 flex items-center gap-1.5 ${
-                selectedVibe === 'family'
-                  ? 'bg-gold-500 text-brown-900 border-gold-500 shadow-md shadow-gold-500/25'
-                  : 'bg-white/5 hover:bg-white/10 text-gold-100 border-gold-500/20'
-              }`}
-            >
-              👪 Courtyard Banquet
-            </button>
-          </div>
-
-          {/* Camera controls in 3D Mode */}
           {is3dMode ? (
-            <div className="flex items-center gap-3 border-t border-gold-500/10 md:border-t-0 pt-2 md:pt-0">
+            <div className="flex items-center gap-3">
               <div className="flex items-center gap-1">
                 <span className="text-[8px] font-bold text-gold-500/50 uppercase mr-1">Zoom</span>
                 <button type="button" onClick={() => setZoom(z => Math.max(0.6, z - 0.1))} className="w-6 h-6 rounded-lg bg-white/5 hover:bg-white/10 border border-gold-500/25 flex items-center justify-center text-gold-500 cursor-pointer shadow-sm"><ZoomOut size={10} /></button>
@@ -1823,31 +1761,7 @@ const TableBlueprintPage = () => {
               </form>
             ) : (
               <div className="space-y-6">
-                <div className="p-4 rounded-2xl border border-gold-500/20 bg-gradient-to-br from-gold-50/40 via-amber-50/20 to-transparent shadow-sm">
-                  <h4 className="text-xs font-bold text-brown-950 uppercase tracking-wider flex items-center gap-1.5 mb-2">
-                    <Sparkles size={14} className="text-gold-600 animate-pulse" />
-                    Finding Your Perfect Ambiance?
-                  </h4>
-                  <p className="text-xs text-brown-700/80 leading-relaxed mb-3">
-                    Use our AI-powered <strong>Vibe Match Finder</strong> at the top to instantly highlight and select the best table for your occasion.
-                  </p>
-                  <div className="flex gap-2">
-                    <button 
-                      type="button" 
-                      onClick={() => applyVibePreset('romantic')} 
-                      className="flex-1 bg-brown-900 text-gold-500 text-[10px] font-bold py-1.5 px-2.5 rounded-lg border border-gold-500/10 hover:bg-brown-950 transition cursor-pointer text-center"
-                    >
-                      Try Romance Match
-                    </button>
-                    <button 
-                      type="button" 
-                      onClick={() => applyVibePreset('quiet')} 
-                      className="flex-1 bg-white text-brown-900 text-[10px] font-bold py-1.5 px-2.5 rounded-lg border border-[#e7ddcd] hover:bg-brown-50 transition cursor-pointer text-center"
-                    >
-                      Try Secluded Cabin
-                    </button>
-                  </div>
-                </div>
+
 
                 <div className="space-y-3">
                   <h4 className="text-xs font-bold text-brown-900 uppercase tracking-wider">Floor Zone Guide</h4>

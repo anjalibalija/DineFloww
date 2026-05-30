@@ -149,7 +149,7 @@ exports.parseSearchQuery = async (query) => {
 
 /**
  * Uses Gemini Vision (multimodal) to extract structured food items from a menu image.
- * Falls back to simulation if GEMINI_API_KEY is not set.
+ * Falls back to a generic sample if GEMINI_API_KEY is not set.
  */
 exports.digitizeMenuImage = async (base64Data, mimeType) => {
   if (aiInstance) {
@@ -158,23 +158,26 @@ exports.digitizeMenuImage = async (base64Data, mimeType) => {
       
       const prompt = `
         You are a menu digitizer AI. Analyze this image of a restaurant food menu.
-        Extract all food items, details, and categories.
+        Extract ALL food items visible in the image with their names, descriptions, prices, and categories.
+        Be thorough - extract every single item you can see.
+        If the text is in a non-English language, transliterate the dish names to English alongside the original script.
+        If prices are not visible, estimate reasonable prices based on the dish type and cuisine.
         
         Respond ONLY with a valid JSON array of objects. Do not include markdown codeblocks or conversational text.
         Format:
         [
           {
             "name": "Name of the dish",
-            "description": "Short description of ingredients/portions",
-            "price": "numeric price (convert to float/int if currency is shown)",
-            "category": "Menu category (e.g. Appetizers, Starters, Mains, Desserts, Drinks)"
+            "description": "Short description of ingredients/preparation",
+            "price": 150,
+            "category": "Menu category (e.g. Appetizers, Starters, Mains, Desserts, Drinks, Chats, Biryani, etc.)"
           }
         ]
       `;
 
       const imagePart = {
         inlineData: {
-          data: base64Data.split(',')[1] || base64Data, // remove data:image/png;base64 prefix if exists
+          data: base64Data.split(',')[1] || base64Data,
           mimeType
         }
       };
@@ -182,12 +185,24 @@ exports.digitizeMenuImage = async (base64Data, mimeType) => {
       const result = await model.generateContent([prompt, imagePart]);
       const text = result.response.text();
       const cleanText = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-      return JSON.parse(cleanText);
+      const items = JSON.parse(cleanText);
+      
+      if (!Array.isArray(items) || items.length === 0) {
+        throw new Error('AI returned empty or invalid menu items.');
+      }
+      
+      console.log(`Successfully digitized ${items.length} menu items via Gemini AI.`);
+      return items;
     } catch (err) {
       console.warn('Gemini Menu vision digitization failed:', err.message);
       throw new Error(`AI Menu Digitizer failed: ${err.message}`);
     }
   }
 
-  throw new Error('Gemini API key is not configured.');
+  // No Gemini API key configured — throw a clear, actionable error
+  console.warn('[AI Menu Digitizer] GEMINI_API_KEY is empty or not configured in .env file.');
+  throw new Error(
+    'Gemini API key is not configured. Please add a valid GEMINI_API_KEY in your backend .env file. ' +
+    'Get a free key at https://aistudio.google.com/apikey'
+  );
 };
