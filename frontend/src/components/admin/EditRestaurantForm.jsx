@@ -298,8 +298,7 @@ const EditRestaurantForm = ({ restaurant, onClose, onSuccess, isDemoMode = false
           </div>
 
           <div className="grid grid-cols-2 gap-3 mb-6">
-            <Select label="Cuisine" icon={Utensils} name="cuisine" options={CUISINE_OPTIONS} half value={form.cuisine} onChange={handleChange} />
-            <Select label="Price Range" icon={IndianRupee} name="priceRange" options={PRICE_OPTIONS} half value={form.priceRange} onChange={handleChange} />
+            <Select label="Cuisine" icon={Utensils} name="cuisine" options={CUISINE_OPTIONS} value={form.cuisine} onChange={handleChange} />
             <Field label="Opening Time" icon={Clock} name="openingTime" type="time" half value={form.openingTime} onChange={handleChange} />
             <Field label="Closing Time" icon={Clock} name="closingTime" type="time" half value={form.closingTime} onChange={handleChange} />
             <div className="col-span-2">
@@ -409,10 +408,7 @@ const EditRestaurantForm = ({ restaurant, onClose, onSuccess, isDemoMode = false
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3 mb-8">
-            <Select label="Crowd Level" icon={Users} name="crowdLevel" options={CROWD_OPTIONS} half value={form.crowdLevel} onChange={handleChange} />
-            <Field label="Queue Length" icon={ListOrdered} name="queueCount" type="number" half value={form.queueCount} onChange={handleChange} />
-          </div>
+
 
           <button type="submit" disabled={submitting}
             className="w-full py-3.5 rounded-xl font-bold text-sm bg-gradient-to-r from-gold-500 to-yellow-400 text-brown-900 shadow-lg disabled:opacity-60 transition-all cursor-pointer flex items-center justify-center gap-2">

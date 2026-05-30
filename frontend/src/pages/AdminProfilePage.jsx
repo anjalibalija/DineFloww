@@ -281,7 +281,6 @@ const AdminProfilePage = () => {
                 {[
                   { label: 'Total Tables', val: totalTables },
                   { label: 'Total Bookings', val: totalBookings },
-                  { label: 'Crowd Level', val: restaurants[0]?.crowdLevel ?? '—' },
                   { label: 'Cuisine', val: restaurants.map(r => r.cuisine).filter((val, id, self) => self.indexOf(val) === id).join(', ') || '—' },
                 ].map(s => (
                   <div key={s.label} className="flex justify-between items-center text-xs">

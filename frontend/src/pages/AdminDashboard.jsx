@@ -163,8 +163,7 @@ const AdminDashboard = () => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
-  const [isDemoMode, setIsDemoMode] = useState(false);
-  const [liveBackup, setLiveBackup] = useState({ restaurants: [], bookings: [], reviewsData: null });
+  const isDemoMode = false;
   const [activeTooltip, setActiveTooltip] = useState(null);
 
   // Search & deletion states for management tabs
@@ -501,27 +500,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleToggleDemoMode = () => {
-    if (!isDemoMode) {
-      setLiveBackup({
-        restaurants,
-        bookings,
-        reviewsData
-      });
-      setRestaurants(MOCK_RESTAURANTS);
-      setBookings(getMockBookings());
-      setReviewsData(MOCK_REVIEWS);
-      setIsDemoMode(true);
-      setSuccessMsg("Demo mode activated! Feel free to edit, delete, or test features.");
-    } else {
-      setRestaurants(liveBackup.restaurants);
-      setBookings(liveBackup.bookings);
-      setReviewsData(liveBackup.reviewsData);
-      setIsDemoMode(false);
-      setSuccessMsg("Live mode restored (showing your actual database contents).");
-    }
-    setTimeout(() => setSuccessMsg(''), 4000);
-  };
+
 
   const addLog = useCallback((event, details, status = 'info') => {
     const timeStr = new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
@@ -609,22 +588,7 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            {/* Interactive Demo Mode Toggle */}
-            <div className="flex items-center gap-3 bg-brown-900/5 px-5 py-3 rounded-2xl border border-brown-900/10 shadow-sm shrink-0">
-              <div className="flex flex-col text-left">
-                <span className="text-xs font-bold text-gold-600 flex items-center gap-1">
-                  ✨ Demo Simulation Mode
-                </span>
-                <span className="text-[10px] text-brown-700/60">Visualize charts with sample data</span>
-              </div>
-              <button
-                type="button"
-                onClick={handleToggleDemoMode}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isDemoMode ? 'bg-gold-500' : 'bg-brown-900/20'}`}
-              >
-                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isDemoMode ? 'translate-x-5' : 'translate-x-0'}`} />
-              </button>
-            </div>
+
           </div>
         </div>
         
@@ -833,7 +797,6 @@ const AdminDashboard = () => {
                         <div className="flex items-center gap-3 text-white/70 text-xs">
                           <span className="flex items-center gap-1"><MapPin size={12} /> {r.location}{r.city ? `, ${r.city}` : ''}</span>
                           <span className="flex items-center gap-1"><Utensils size={12} /> {r.cuisine}</span>
-                          <span className="flex items-center gap-1"><IndianRupee size={12} /> {r.priceRange}</span>
                         </div>
                       </div>
                       {/* Rating badge */}
@@ -849,11 +812,10 @@ const AdminDashboard = () => {
                       <p className="text-sm text-brown-600 line-clamp-2 mb-4">{r.description}</p>
 
                       {/* Quick stats */}
-                      <div className="grid grid-cols-4 gap-2 mb-4">
+                      <div className="grid grid-cols-3 gap-2 mb-4">
                         {[
                           { label: 'Tables', value: r.tables?.length || 0, icon: LayoutGrid },
                           { label: 'Bookings', value: bookings.filter(b => b.restaurant?.name === r.name).length, icon: Ticket },
-                          { label: 'Queue', value: r.queueCount, icon: Users },
                           { label: 'Hours', value: `${r.openingTime || '10:00'}-${r.closingTime || '22:00'}`, icon: Clock, small: true }
                         ].map(s => (
                           <div key={s.label} className="bg-cream-100/80 rounded-xl p-2.5 text-center">
@@ -862,17 +824,6 @@ const AdminDashboard = () => {
                             <p className="text-[10px] text-brown-500 uppercase">{s.label}</p>
                           </div>
                         ))}
-                      </div>
-
-                      {/* Crowd status */}
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-xs text-brown-500">Crowd Level</span>
-                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                          r.crowdLevel === 'Full' ? 'bg-red-100 text-red-700' :
-                          r.crowdLevel === 'High' ? 'bg-orange-100 text-orange-700' :
-                          r.crowdLevel === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-green-100 text-green-700'
-                        }`}>{r.crowdLevel}</span>
                       </div>
 
                       {/* Action buttons */}

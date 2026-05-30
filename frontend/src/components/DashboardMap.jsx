@@ -203,26 +203,7 @@ const DashboardMap = ({ restaurants = [] }) => {
             <span>📍</span>
             <span>${restaurant.location || restaurant.city || ''}</span>
           </div>
-          <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
-            <span style="
-              font-size: 10px;
-              background: #fef3c7;
-              color: #92400e;
-              padding: 2px 8px;
-              border-radius: 6px;
-              font-weight: 600;
-              border: 1px solid #fde68a;
-            ">${restaurant.priceRange || '$$'}</span>
-            <span style="
-              font-size: 10px;
-              background: ${restaurant.crowdLevel === 'High' || restaurant.crowdLevel === 'Full' ? '#fef2f2' : restaurant.crowdLevel === 'Medium' ? '#fffbeb' : '#f0fdf4'};
-              color: ${restaurant.crowdLevel === 'High' || restaurant.crowdLevel === 'Full' ? '#dc2626' : restaurant.crowdLevel === 'Medium' ? '#d97706' : '#16a34a'};
-              padding: 2px 8px;
-              border-radius: 6px;
-              font-weight: 600;
-              border: 1px solid ${restaurant.crowdLevel === 'High' || restaurant.crowdLevel === 'Full' ? '#fecaca' : restaurant.crowdLevel === 'Medium' ? '#fde68a' : '#bbf7d0'};
-            ">${restaurant.crowdLevel || 'Low'} Crowd</span>
-          </div>
+
           <a href="/restaurants/${restaurant.id}" style="
             display: block;
             text-align: center;

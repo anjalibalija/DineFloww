@@ -313,19 +313,18 @@ const Dashboard = () => {
         console.error('Failed to fetch coupons:', err.message);
       }
 
-      // Populate database values or fall back to mock data if empty (satisfying empty-state protection)
-      setBookings(userBookings.length > 0 ? userBookings : MOCK_BOOKINGS);
-      setFavorites(userFavs.length > 0 ? userFavs : MOCK_FAVORITES);
-      setReviews(userReviews.length > 0 ? userReviews : MOCK_REVIEWS);
-      setCoupons(userCoupons.length > 0 ? userCoupons : MOCK_COUPONS);
+      // Populate database values
+      setBookings(userBookings);
+      setFavorites(userFavs);
+      setReviews(userReviews);
+      setCoupons(userCoupons);
       
     } catch (err) {
-      // Complete offline fallback in case of CORS or connectivity failures
-      setBookings(MOCK_BOOKINGS);
-      setFavorites(MOCK_FAVORITES);
-      setReviews(MOCK_REVIEWS);
-      setCoupons(MOCK_COUPONS);
-      showToast('Loaded offline realistic sample data.');
+      setBookings([]);
+      setFavorites([]);
+      setReviews([]);
+      setCoupons([]);
+      showToast('Failed to load dashboard data.');
     } finally {
       setLoading(false);
     }
@@ -338,17 +337,11 @@ const Dashboard = () => {
 
   // Toggle favorite API
   const handleToggleFavorite = async (restaurantId, name) => {
-    if (String(restaurantId).startsWith('res-') || String(restaurantId).startsWith('fav-mock')) {
-      setFavorites(prev => prev.filter(f => f.restaurantId !== restaurantId && f.id !== restaurantId));
-      showToast(`Removed ${name} from favorites (Offline Mode).`);
-      return;
-    }
-
     try {
       await axios.post(`/api/favorites/${restaurantId}`);
       const favsRes = await axios.get('/api/favorites');
       const userFavs = favsRes.data.data || [];
-      setFavorites(userFavs.length > 0 ? userFavs : MOCK_FAVORITES);
+      setFavorites(userFavs);
       showToast(`Successfully updated favorite status for ${name}.`);
     } catch (err) {
       showToast(err.response?.data?.message || 'Failed to toggle favorite.');
@@ -359,15 +352,6 @@ const Dashboard = () => {
   const handleCancelBooking = async () => {
     if (!cancelConfirmBooking) return;
     const { id, restaurantName } = cancelConfirmBooking;
-
-    if (String(id).startsWith('mock-book-')) {
-      setBookings(prev =>
-        prev.map(b => b.id === id ? { ...b, status: 'Cancelled' } : b)
-      );
-      setCancelConfirmBooking(null);
-      showToast(`Cancelled reservation at ${restaurantName} (Offline Mode).`);
-      return;
-    }
 
     try {
       await axios.delete(`/api/bookings/${id}`);
@@ -385,13 +369,6 @@ const Dashboard = () => {
   const handleDeleteReview = async () => {
     if (!reviewToDelete) return;
     const { id, restaurantName } = reviewToDelete;
-
-    if (String(id).startsWith('rev-mock-')) {
-      setReviews(prev => prev.filter(r => r.id !== id));
-      setReviewToDelete(null);
-      showToast(`Deleted review for ${restaurantName} (Offline Mode).`);
-      return;
-    }
 
     try {
       await axios.delete(`/api/reviews/${id}`);
@@ -423,8 +400,6 @@ const Dashboard = () => {
 
   // Dynamic loyalty calculations based on database bookings and reviews
   const loyaltyPoints = useMemo(() => {
-    const isMock = bookings.length > 0 && String(bookings[0].id).startsWith('mock-');
-    if (isMock) return 250;
     const completedCount = bookings.filter(b => b.status === 'Completed').length;
     const confirmedCount = bookings.filter(b => b.status === 'Confirmed').length;
     return (completedCount + confirmedCount) * 50 + reviews.length * 25;
@@ -672,20 +647,7 @@ const Dashboard = () => {
                     </span>
                   </div>
 
-                  {/* Demo/Fallback Notification Banner */}
-                  {bookings.length > 0 && String(bookings[0].id).startsWith('mock-') && (
-                    <div className="bg-amber-50/50 border border-[#D4AF37]/20 p-4 rounded-3xl text-left flex items-center gap-3">
-                      <div className="bg-[#2C1B18] text-[#D4AF37] p-2 rounded-xl shrink-0">
-                        <Info size={14} />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-[#2C1B18] text-xs">Viewing Demonstration Sample Data</h4>
-                        <p className="text-stone-500 text-[10px] mt-0.5 font-light">
-                          Your PostgreSQL database currently holds no bookings. We've automatically loaded realistic mock data for preview!
-                        </p>
-                      </div>
-                    </div>
-                  )}
+
 
                   {/* Upcoming Dinner Countdown Banner */}
                   {upcomingBooking && (
