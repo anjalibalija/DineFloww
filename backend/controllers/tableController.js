@@ -6,11 +6,104 @@ exports.getTablesByRestaurant = async (req, res) => {
     if (req.params.id) {
       query = { restaurantId: req.params.id };
     }
-    const tables = await prisma.restaurantTable.findMany({
+    let tables = await prisma.restaurantTable.findMany({
       where: query,
       include: { bookings: true },
       orderBy: { tableNumber: 'asc' }
     });
+
+    // Auto-seed tables if this specific restaurant has 0 tables defined
+    if (tables.length === 0 && req.params.id) {
+      const restaurant = await prisma.restaurant.findUnique({
+        where: { id: req.params.id }
+      });
+      if (restaurant) {
+        console.log(`Auto-seeding 8 default tables for restaurant: ${restaurant.name} (${restaurant.id})`);
+        const defaultTables = [
+          {
+            tableNumber: 'T1',
+            category: 'VIP Private Cabins',
+            capacity: 4,
+            positionX: 12.5,
+            positionY: 45.0,
+            description: 'Luxurious private glass cabin table offering ultimate seclusion and quiet ambiance.'
+          },
+          {
+            tableNumber: 'T2',
+            category: 'Window Side (Scenic View)',
+            capacity: 5,
+            positionX: 34.0,
+            positionY: 11.0,
+            description: 'Prime window-side seating with stunning views of the evening skyline.'
+          },
+          {
+            tableNumber: 'T3',
+            category: 'Window Side (Scenic View)',
+            capacity: 3,
+            positionX: 48.0,
+            positionY: 11.0,
+            description: 'Intimate scenic window table perfect for relaxed conversations.'
+          },
+          {
+            tableNumber: 'T4',
+            category: 'Window Side (Scenic View)',
+            capacity: 4,
+            positionX: 62.0,
+            positionY: 11.0,
+            description: 'Comfortable table right next to the grand floor-to-ceiling glass panel windows.'
+          },
+          {
+            tableNumber: 'T5',
+            category: 'Bar & Lounge',
+            capacity: 2,
+            positionX: 85.0,
+            positionY: 11.0,
+            description: 'High-top seating near the cocktail bar, perfect for couples enjoying mixologist craft.'
+          },
+          {
+            tableNumber: 'T6',
+            category: 'VIP Private Cabins',
+            capacity: 6,
+            positionX: 12.5,
+            positionY: 68.0,
+            description: 'Spacious private cabin table for families and larger groups seeking a private dining experience.'
+          },
+          {
+            tableNumber: 'T7',
+            category: 'Main Dining Hall',
+            capacity: 4,
+            positionX: 36.0,
+            positionY: 45.0,
+            description: 'Grand dining hall table situated under the central crystal chandelier.'
+          },
+          {
+            tableNumber: 'T8',
+            category: 'Main Dining Hall',
+            capacity: 4,
+            positionX: 62.0,
+            positionY: 45.0,
+            description: 'Elegant dining hall table offering swift butler access and lively energy.'
+          }
+        ];
+
+        for (const t of defaultTables) {
+          await prisma.restaurantTable.create({
+            data: {
+              restaurantId: req.params.id,
+              ...t
+            }
+          });
+        }
+
+        // Fetch newly created tables
+        tables = await prisma.restaurantTable.findMany({
+          where: query,
+          include: { bookings: true },
+          orderBy: { tableNumber: 'asc' }
+        });
+      }
+    }
+
     res.status(200).json({ success: true, count: tables.length, data: tables });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
