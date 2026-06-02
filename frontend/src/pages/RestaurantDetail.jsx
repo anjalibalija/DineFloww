@@ -167,12 +167,84 @@ const RestaurantDetail = () => {
                   <Star size={20} className="text-gold-500 fill-gold-500" />
                   <span className="font-bold">{averageRating}</span> / 5.0
                 </div>
-
+                <div className="flex items-center gap-2">
+                  <IndianRupee size={18} className="text-gold-500" />
+                  <span>
+                    {restaurant.priceRange ? restaurant.priceRange.replace(/\$/g, '₹') : '₹₹'}{' '}
+                    <span className="text-sm opacity-80">
+                      ({
+                        restaurant.priceRange === '₹' ? 'Budget: Under ₹250' :
+                        restaurant.priceRange === '₹₹' ? 'Moderate: ₹250–₹750' :
+                        restaurant.priceRange === '₹₹₹' ? 'Premium: ₹750–₹1,500' :
+                        'Fine Dining: ₹1,500+'
+                      } per person)
+                    </span>
+                  </span>
+                </div>
               </div>
             </motion.div>
           </div>
         </div>
       </div>
+
+      {/* ── Queue Game Banner ── */}
+      <AnimatePresence>
+        {restaurant.queueCount > 5 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="relative overflow-hidden bg-gradient-to-r from-stone-950 via-stone-900 to-amber-950 border-b border-amber-900/30"
+          >
+            {/* Floating orbs */}
+            <div className="absolute -left-10 top-0 w-40 h-40 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
+            <div className="absolute right-20 -bottom-6 w-32 h-32 rounded-full bg-amber-600/10 blur-2xl pointer-events-none" />
+
+            <div className="container mx-auto px-4 py-5 flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
+              <div className="flex items-center gap-4">
+                {/* Pulsing icon */}
+                <div className="relative shrink-0">
+                  <div className="absolute inset-0 rounded-full bg-amber-500/20 animate-ping" />
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 relative">
+                    <Gamepad2 size={22} className="text-stone-900" />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-white font-serif font-black text-lg">Queue is busy!</span>
+                    <span className="bg-red-500/20 border border-red-400/30 text-red-300 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      {restaurant.queueCount} waiting
+                    </span>
+                  </div>
+                  <p className="text-stone-400 text-sm">
+                    Play a quick game &amp; win <span className="text-amber-400 font-bold">20–30% off</span> your bill while you wait!
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="hidden sm:flex items-center gap-2">
+                  {['🍕','🃏','🏆'].map((e, i) => (
+                    <motion.span
+                      key={i}
+                      animate={{ y: [0, -4, 0] }}
+                      transition={{ repeat: Infinity, duration: 1.2, delay: i * 0.2 }}
+                      className="text-xl"
+                    >{e}</motion.span>
+                  ))}
+                </div>
+                <Link
+                  to="/puzzle"
+                  className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 text-stone-900 px-6 py-2.5 rounded-full font-black text-sm hover:from-amber-400 hover:to-amber-500 transition-all shadow-lg shadow-amber-500/20 group"
+                >
+                  <Gift size={15} className="group-hover:rotate-12 transition-transform" />
+                  Play &amp; Win Coupon
+                </Link>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
@@ -530,7 +602,16 @@ const RestaurantDetail = () => {
             <div className="bg-white p-8 rounded-2xl shadow-xl border border-cream-200 sticky top-24">
               <h3 className="text-2xl font-serif font-bold text-brown-900 mb-6">Reserve a Table</h3>
               
-
+              <div className="space-y-4 mb-8 text-brown-800">
+                <div className="flex justify-between pb-4 border-b border-gray-100">
+                  <span className="flex items-center gap-2"><Users size={18} /> Current Crowd</span>
+                  <span className="font-bold">{restaurant.crowdLevel}</span>
+                </div>
+                <div className="flex justify-between pb-4 border-b border-gray-100">
+                  <span className="flex items-center gap-2"><Clock size={18} /> Waitlist</span>
+                  <span className="font-bold">{restaurant.queueCount} people</span>
+                </div>
+              </div>
 
               <Link 
                 to={`/restaurants/${restaurant.id}/blueprint`}

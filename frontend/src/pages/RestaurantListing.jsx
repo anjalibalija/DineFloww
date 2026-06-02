@@ -734,7 +734,10 @@ const RestaurantListing = () => {
                         <p className="text-[11px] text-brown-700/60 truncate mb-0.5 font-medium">{restaurant.cuisine}</p>
                         <p className="text-[10px] text-brown-700/50 truncate mb-1">📍 {restaurant.location || restaurant.city}</p>
                       </div>
-                      <div className="flex justify-end items-center pt-2 border-t border-cream-100">
+                      <div className="flex justify-between items-center pt-2 border-t border-cream-100">
+                        <span className="text-[11px] font-serif font-bold text-gold-500">
+                          {restaurant.priceRange === '$' || restaurant.priceRange === '₹' ? 'Budget' : restaurant.priceRange === '$$' || restaurant.priceRange === '₹₹' ? 'Moderate' : restaurant.priceRange === '$$$' || restaurant.priceRange === '₹₹₹' ? 'Premium' : 'Fine Dining'}
+                        </span>
                         <Link
                           to={`/restaurants/${restaurant.id}`}
                           className="bg-brown-900 hover:bg-gold-500 text-cream-100 hover:text-brown-900 px-3 py-1.5 rounded-lg text-[10px] font-serif font-bold transition-all shadow-sm"
@@ -840,9 +843,12 @@ const RestaurantListing = () => {
                       </div>
                     </div>
 
-                    {/* Location */}
+                    {/* Location and Cost */}
                     <div className="flex justify-between items-center text-xs text-brown-700/60 font-sans font-medium mb-3">
-                      <span className="truncate">📍 {restaurant.location || restaurant.city}</span>
+                      <span className="truncate max-w-[55%]">📍 {restaurant.location || restaurant.city}</span>
+                      <span className="shrink-0 text-brown-800 font-bold bg-gold-50 px-2 py-0.5 rounded-lg border border-gold-500/10">
+                        {getPriceText(restaurant.priceRange)}
+                      </span>
                     </div>
 
                     {/* Description snippet */}
@@ -854,7 +860,21 @@ const RestaurantListing = () => {
 
                     {/* Divider and Actions */}
                     <div className="pt-4 border-t border-cream-100 flex items-center justify-between mt-auto">
-
+                      {/* Crowd indicator */}
+                      <div className="flex items-center gap-1.5 text-xs font-sans">
+                        <Users size={14} className="text-brown-700/50" />
+                        <span
+                          className={`font-bold ${
+                            restaurant.crowdLevel === 'High' || restaurant.crowdLevel === 'Full'
+                              ? 'text-red-600'
+                              : restaurant.crowdLevel === 'Medium'
+                              ? 'text-amber-600'
+                              : 'text-green-600'
+                          }`}
+                        >
+                          {restaurant.crowdLevel || 'Average'} Crowd
+                        </span>
+                      </div>
 
                       {/* Book a table button */}
                       <Link

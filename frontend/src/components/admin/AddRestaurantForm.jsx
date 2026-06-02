@@ -236,7 +236,8 @@ const AddRestaurantForm = ({ onClose, onSuccess, isDemoMode = false }) => {
           {/* Section: Details */}
           <p className="text-xs font-bold text-brown-800 uppercase tracking-widest mb-3 flex items-center gap-2"><Utensils size={14} /> Restaurant Details</p>
           <div className="grid grid-cols-2 gap-3 mb-6">
-            <Select label="Cuisine Type" icon={Utensils} name="cuisine" options={CUISINE_OPTIONS} value={form.cuisine} onChange={handleChange} />
+            <Select label="Cuisine Type" icon={Utensils} name="cuisine" options={CUISINE_OPTIONS} half value={form.cuisine} onChange={handleChange} />
+            <Select label="Price Range" icon={IndianRupee} name="priceRange" options={PRICE_OPTIONS} half value={form.priceRange} onChange={handleChange} />
             <Field label="Opening Time" icon={Clock} name="openingTime" type="time" half value={form.openingTime} onChange={handleChange} />
             <Field label="Closing Time" icon={Clock} name="closingTime" type="time" half value={form.closingTime} onChange={handleChange} />
             <div className="col-span-2">
@@ -306,7 +307,12 @@ const AddRestaurantForm = ({ onClose, onSuccess, isDemoMode = false }) => {
             <Field label="Table Categories" icon={LayoutGrid} name="tableCategories" placeholder="Rooftop, Window Side, Private Cabin, ..." value={form.tableCategories} onChange={handleChange} />
           </div>
 
-
+          {/* Section: Status */}
+          <p className="text-xs font-bold text-brown-800 uppercase tracking-widest mb-3 flex items-center gap-2"><Users size={14} /> Current Status</p>
+          <div className="grid grid-cols-2 gap-3 mb-8">
+            <Select label="Crowd Level" icon={Users} name="crowdLevel" options={CROWD_OPTIONS} half value={form.crowdLevel} onChange={handleChange} />
+            <Field label="Queue Length" icon={ListOrdered} name="queueCount" type="number" placeholder="0" half value={form.queueCount} onChange={handleChange} />
+          </div>
 
           {/* Submit */}
           <button type="submit" disabled={submitting}
