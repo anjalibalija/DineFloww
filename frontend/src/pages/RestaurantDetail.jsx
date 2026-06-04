@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import { Star, MapPin, Users, BrainCircuit, Clock, Utensils, Search, Sparkles, Heart, Check, Trash2, IndianRupee, X, Gamepad2, Gift, Trophy, ArrowLeft } from 'lucide-react';
+import { Star, MapPin, Users, BrainCircuit, Clock, Utensils, Search, Sparkles, Heart, Check, Trash2, IndianRupee, X, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import RestaurantMap from '../components/RestaurantMap';
 import { useAuth } from '../context/AuthContext';
@@ -210,64 +210,7 @@ const RestaurantDetail = () => {
         </div>
       </div>
 
-      {/* ── Queue Game Banner ── */}
-      <AnimatePresence>
-        {restaurant.queueCount > 5 && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="relative overflow-hidden bg-gradient-to-r from-stone-950 via-stone-900 to-amber-950 border-b border-amber-900/30"
-          >
-            {/* Floating orbs */}
-            <div className="absolute -left-10 top-0 w-40 h-40 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
-            <div className="absolute right-20 -bottom-6 w-32 h-32 rounded-full bg-amber-600/10 blur-2xl pointer-events-none" />
 
-            <div className="container mx-auto px-4 py-5 flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
-              <div className="flex items-center gap-4">
-                {/* Pulsing icon */}
-                <div className="relative shrink-0">
-                  <div className="absolute inset-0 rounded-full bg-amber-500/20 animate-ping" />
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 relative">
-                    <Gamepad2 size={22} className="text-stone-900" />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-white font-serif font-black text-lg">Queue is busy!</span>
-                    <span className="bg-red-500/20 border border-red-400/30 text-red-300 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      {restaurant.queueCount} waiting
-                    </span>
-                  </div>
-                  <p className="text-stone-400 text-sm">
-                    Play a quick game &amp; win <span className="text-amber-400 font-bold">20–30% off</span> your bill while you wait!
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 shrink-0">
-                <div className="hidden sm:flex items-center gap-2">
-                  {['🍕','🃏','🏆'].map((e, i) => (
-                    <motion.span
-                      key={i}
-                      animate={{ y: [0, -4, 0] }}
-                      transition={{ repeat: Infinity, duration: 1.2, delay: i * 0.2 }}
-                      className="text-xl"
-                    >{e}</motion.span>
-                  ))}
-                </div>
-                <Link
-                  to="/puzzle"
-                  className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 text-stone-900 px-6 py-2.5 rounded-full font-black text-sm hover:from-amber-400 hover:to-amber-500 transition-all shadow-lg shadow-amber-500/20 group"
-                >
-                  <Gift size={15} className="group-hover:rotate-12 transition-transform" />
-                  Play &amp; Win Coupon
-                </Link>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
@@ -575,20 +518,7 @@ const RestaurantDetail = () => {
                   </div>
                   <p className="text-brown-800 font-medium mb-2">{aiPrediction.message}</p>
                   
-                  {aiPrediction.isQueueTooLong && (
-                    <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-                      <Clock className="text-red-500 shrink-0 mt-0.5" />
-                      <div>
-                        <h4 className="font-bold text-red-700">Long Queue Predicted</h4>
-                        <p className="text-sm text-red-600 mt-1">
-                          Play our exclusive puzzle while you wait to earn a 20% - 30% discount on your bill!
-                        </p>
-                        <Link to="/puzzle" className="mt-3 inline-block bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition">
-                          Play Puzzle & Earn Discount
-                        </Link>
-                      </div>
-                    </div>
-                  )}
+
                 </div>
               </section>
             )}

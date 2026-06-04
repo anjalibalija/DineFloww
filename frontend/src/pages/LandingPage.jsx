@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Sparkles, Utensils, MapPin, BrainCircuit, ScanLine, Compass } from 'lucide-react';
+import { Utensils, MapPin, BrainCircuit, ScanLine, Compass } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const LandingPage = () => {
@@ -175,10 +175,10 @@ const LandingPage = () => {
               className="bg-white p-8 lg:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-cream-200 transition-all cursor-default group"
             >
               <div className="bg-brown-900 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 text-gold-500 group-hover:rotate-12 transition-transform">
-                <Sparkles size={32} />
+                <Utensils size={32} />
               </div>
-              <h3 className="text-2xl font-serif font-bold mb-3 text-[#25150d]">Gamified Rewards</h3>
-              <p className="opacity-75 leading-relaxed">Wait times are fun again. Solve logic puzzles while you wait and earn exclusive discount coupons to spend.</p>
+              <h3 className="text-2xl font-serif font-bold mb-3 text-[#25150d]">Digital Menus</h3>
+              <p className="opacity-75 leading-relaxed">Browse accurate, up-to-date digital menus digitized using advanced computer vision technology.</p>
             </motion.div>
           </div>
         </div>

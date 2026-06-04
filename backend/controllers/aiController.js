@@ -68,7 +68,7 @@ exports.getCrowdPrediction = async (req, res) => {
 
     let prediction = "";
     if (isQueueTooLong) {
-      prediction = `🚨 High Demand: Our AI predicts a long queue of approximately ${predictedQueueCount} groups with a ${predictedWaitMinutes}-minute wait time. Play our puzzle to earn a 20% - 30% discount on your bill while you wait!`;
+      prediction = `🚨 High Demand: Our AI predicts a long queue of approximately ${predictedQueueCount} groups with a ${predictedWaitMinutes}-minute wait time.`;
     } else if (predictedQueueCount > 2) {
       prediction = `⏱️ Moderate Demand: The estimated queue is ${predictedQueueCount} groups (~${predictedWaitMinutes} mins wait).`;
     } else {
@@ -112,38 +112,60 @@ exports.chat = async (req, res) => {
     if (filters.city) {
       whereClause.city = { contains: filters.city, mode: 'insensitive' };
     }
+    // If a search term is specified, we query candidates based on basic fields
     if (filters.search) {
       whereClause.OR = [
         { name: { contains: filters.search, mode: 'insensitive' } },
         { description: { contains: filters.search, mode: 'insensitive' } },
         { city: { contains: filters.search, mode: 'insensitive' } },
-        { location: { contains: filters.search, mode: 'insensitive' } },
-        { menuHighlights: { contains: filters.search, mode: 'insensitive' } }
+        { location: { contains: filters.search, mode: 'insensitive' } }
       ];
     }
 
     let restaurants = await prisma.restaurant.findMany({
-      where: whereClause,
-      take: 4
+      where: whereClause
     });
 
-    // Fallback: If strict filters (like cuisine/price matching) return 0 results
-    // but the user specified a search query, fall back to searching purely by search term and city.
-    if (restaurants.length === 0 && filters.search) {
-      const fallbackClause = {
-        OR: [
-          { name: { contains: filters.search, mode: 'insensitive' } },
-          { description: { contains: filters.search, mode: 'insensitive' } },
-          { menuHighlights: { contains: filters.search, mode: 'insensitive' } }
-        ]
-      };
-      if (filters.city) {
-        fallbackClause.city = { contains: filters.city, mode: 'insensitive' };
-      }
-      restaurants = await prisma.restaurant.findMany({
-        where: fallbackClause,
-        take: 4
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      restaurants = restaurants.filter(r => {
+        const matchesMain = 
+          r.name.toLowerCase().includes(searchLower) ||
+          r.description.toLowerCase().includes(searchLower) ||
+          (r.city && r.city.toLowerCase().includes(searchLower)) ||
+          r.location.toLowerCase().includes(searchLower);
+          
+        const matchesMenu = r.menuHighlights && r.menuHighlights.some(item => 
+          item.toLowerCase().includes(searchLower)
+        );
+        
+        return matchesMain || matchesMenu;
       });
+    }
+
+    restaurants = restaurants.slice(0, 4);
+
+    // Fallback: If strict filters return 0 results, query all to check menuHighlights and other fields
+    if (restaurants.length === 0 && filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      let allRestaurants = await prisma.restaurant.findMany();
+      restaurants = allRestaurants.filter(r => {
+        const matchesMain = 
+          r.name.toLowerCase().includes(searchLower) ||
+          r.description.toLowerCase().includes(searchLower);
+          
+        const matchesMenu = r.menuHighlights && r.menuHighlights.some(item => 
+          item.toLowerCase().includes(searchLower)
+        );
+        
+        return matchesMain || matchesMenu;
+      });
+
+      if (filters.city) {
+        const cityLower = filters.city.toLowerCase();
+        restaurants = restaurants.filter(r => r.city && r.city.toLowerCase().includes(cityLower));
+      }
+      restaurants = restaurants.slice(0, 4);
     }
 
     let reply = "";
@@ -232,16 +254,15 @@ exports.digitizeMenu = async (req, res) => {
         throw err;
       }
     }
-    
     // Save these food items to the restaurant menuHighlights field
-    const highlightString = items.map(item => {
+    const highlightArray = items.map(item => {
       const descPart = item.description ? ` - ${item.description}` : '';
       return `${item.name} (${item.category}): ₹${item.price}${descPart}`;
-    }).join('\n');
+    });
 
     await prisma.restaurant.update({
       where: { id: restaurantId },
-      data: { menuHighlights: highlightString }
+      data: { menuHighlights: highlightArray }
     });
 
     res.status(200).json({

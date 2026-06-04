@@ -1,6 +1,6 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Utensils, LogOut, User, Shield, LogIn, Calendar } from 'lucide-react';
+import { Utensils, LogOut, User, Shield, LogIn, Calendar, LayoutGrid } from 'lucide-react';
 
 const Navbar = () => {
   const { user, loading, logout, isAdmin } = useAuth();
@@ -44,9 +44,6 @@ const Navbar = () => {
                 </>
               ) : (
                 <>
-                  <Link to="/dashboard" className="text-brown-800 hover:text-gold-500 font-medium transition flex items-center gap-1">
-                    <Calendar size={18} /> My Bookings
-                  </Link>
                   <Link to="/profile" className="text-brown-800 hover:text-gold-500 font-medium transition flex items-center gap-1">
                     <User size={18} /> My Profile
                   </Link>

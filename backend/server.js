@@ -40,7 +40,7 @@ app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/restaurants/:id/tables', tableRoutes);
 app.use('/api/tables', globalTableRoutes);
 app.use('/api/bookings', bookingRoutes);
-app.use('/api', couponRoutes); // /api/puzzle and /api/coupons
+app.use('/api', couponRoutes); // /api/coupons
 app.use('/api/ai', aiRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/favorites', favoriteRoutes);

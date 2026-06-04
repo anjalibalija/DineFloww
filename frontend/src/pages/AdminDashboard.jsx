@@ -8,7 +8,7 @@ import {
   Users, MapPin, Clock, IndianRupee, Utensils, TrendingUp,
   CheckCircle2, AlertTriangle, User, Mail, Phone, Lock, Shield,
   Bell, HelpCircle, Camera, Key, Globe, Activity, ShieldAlert,
-  Star, MessageSquare, CreditCard, Building
+  Star, MessageSquare, CreditCard, Building, CalendarDays, ArrowRight
 } from 'lucide-react';
 
 import AddRestaurantForm from '../components/admin/AddRestaurantForm';
@@ -163,8 +163,7 @@ const AdminDashboard = () => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
-  const [isDemoMode, setIsDemoMode] = useState(false);
-  const [liveBackup, setLiveBackup] = useState({ restaurants: [], bookings: [], reviewsData: null });
+  const isDemoMode = false;
   const [activeTooltip, setActiveTooltip] = useState(null);
 
   // Search & deletion states for management tabs
@@ -501,27 +500,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleToggleDemoMode = () => {
-    if (!isDemoMode) {
-      setLiveBackup({
-        restaurants,
-        bookings,
-        reviewsData
-      });
-      setRestaurants(MOCK_RESTAURANTS);
-      setBookings(getMockBookings());
-      setReviewsData(MOCK_REVIEWS);
-      setIsDemoMode(true);
-      setSuccessMsg("Demo mode activated! Feel free to edit, delete, or test features.");
-    } else {
-      setRestaurants(liveBackup.restaurants);
-      setBookings(liveBackup.bookings);
-      setReviewsData(liveBackup.reviewsData);
-      setIsDemoMode(false);
-      setSuccessMsg("Live mode restored (showing your actual database contents).");
-    }
-    setTimeout(() => setSuccessMsg(''), 4000);
-  };
+
 
   const addLog = useCallback((event, details, status = 'info') => {
     const timeStr = new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
@@ -609,22 +588,6 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            {/* Interactive Demo Mode Toggle */}
-            <div className="flex items-center gap-3 bg-brown-900/5 px-5 py-3 rounded-2xl border border-brown-900/10 shadow-sm shrink-0">
-              <div className="flex flex-col text-left">
-                <span className="text-xs font-bold text-gold-600 flex items-center gap-1">
-                  ✨ Demo Simulation Mode
-                </span>
-                <span className="text-[10px] text-brown-700/60">Visualize charts with sample data</span>
-              </div>
-              <button
-                type="button"
-                onClick={handleToggleDemoMode}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isDemoMode ? 'bg-gold-500' : 'bg-brown-900/20'}`}
-              >
-                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isDemoMode ? 'translate-x-5' : 'translate-x-0'}`} />
-              </button>
-            </div>
           </div>
         </div>
         
@@ -686,6 +649,181 @@ const AdminDashboard = () => {
                 </motion.div>
               ))}
             </div>
+
+            {/* ── Recent Bookings Lobby ── */}
+            {(() => {
+              const todayStr = new Date().toDateString();
+              const todayBookings = bookings
+                .filter(b => b.status !== 'Cancelled' && new Date(b.bookingDate).toDateString() === todayStr)
+                .sort((a, b) => a.bookingTime.localeCompare(b.bookingTime));
+              const upcomingBookings = bookings
+                .filter(b => b.status !== 'Cancelled' && new Date(b.bookingDate) > new Date() && new Date(b.bookingDate).toDateString() !== todayStr)
+                .sort((a, b) => new Date(a.bookingDate) - new Date(b.bookingDate))
+                .slice(0, 8);
+              const recentAll = [...todayBookings, ...upcomingBookings].slice(0, 10);
+
+              return (
+                <div className="bg-white rounded-2xl border border-cream-200 shadow-sm overflow-hidden">
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-6 py-4 border-b border-cream-100 bg-gradient-to-r from-brown-900 to-brown-800">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-gold-500/20 flex items-center justify-center">
+                        <CalendarDays size={18} className="text-gold-400" />
+                      </div>
+                      <div>
+                        <h3 className="font-serif font-bold text-white text-base">Bookings Lobby</h3>
+                        <p className="text-[10px] text-white/50 font-sans">
+                          {todayBookings.length} today · {upcomingBookings.length} upcoming
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setActiveTab('bookings')}
+                      className="flex items-center gap-1.5 text-[11px] font-bold text-gold-400 hover:text-gold-300 transition-colors cursor-pointer"
+                    >
+                      View All <ArrowRight size={13} />
+                    </button>
+                  </div>
+
+                  {loadingAnalytics ? (
+                    <div className="flex items-center justify-center py-10 gap-3">
+                      <div className="w-6 h-6 border-2 border-brown-900/20 border-t-brown-900 rounded-full animate-spin" />
+                      <span className="text-sm text-brown-500">Loading bookings...</span>
+                    </div>
+                  ) : recentAll.length === 0 ? (
+                    <div className="text-center py-12 px-6">
+                      <CalendarDays size={36} className="mx-auto text-cream-300 mb-3" />
+                      <p className="font-serif text-brown-900 font-semibold">No upcoming bookings</p>
+                      <p className="text-xs text-brown-500 mt-1">Reservations will appear here as guests book tables.</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-cream-100">
+                      {/* Today section header */}
+                      {todayBookings.length > 0 && (
+                        <div className="px-6 py-2 bg-amber-50/60">
+                          <span className="text-[10px] font-bold text-amber-700 uppercase tracking-widest flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse inline-block" />
+                            Today — {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })}
+                          </span>
+                        </div>
+                      )}
+
+                      {todayBookings.map((b, idx) => (
+                        <motion.div
+                          key={b.id}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: idx * 0.04 }}
+                          className="flex items-center gap-4 px-6 py-3.5 hover:bg-amber-50/40 transition-colors group"
+                        >
+                          {/* Time pill */}
+                          <div className="shrink-0 w-16 text-center">
+                            <span className="bg-gold-500 text-brown-900 text-[11px] font-black px-2 py-1 rounded-lg block">
+                              {b.bookingTime}
+                            </span>
+                          </div>
+
+                          {/* Guest avatar */}
+                          <div className="w-8 h-8 rounded-full bg-brown-100 flex items-center justify-center shrink-0 text-brown-700 font-bold text-xs border border-cream-200">
+                            {(b.user?.name || b.userName || '?')[0].toUpperCase()}
+                          </div>
+
+                          {/* Details */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-brown-900 truncate">
+                              {b.user?.name || b.userName || 'Guest'}
+                            </p>
+                            <p className="text-[11px] text-brown-500 truncate flex items-center gap-2">
+                              <span className="flex items-center gap-1"><Users size={10} />{b.peopleCount} guests</span>
+                              {b.table?.tableNumber && <span className="flex items-center gap-1"><LayoutGrid size={10} />Table {b.table.tableNumber}</span>}
+                              {b.restaurant?.name && <span className="flex items-center gap-1"><Store size={10} />{b.restaurant.name}</span>}
+                            </p>
+                          </div>
+
+                          {/* Status badge */}
+                          <span className={`shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full border ${
+                            b.status === 'Confirmed'
+                              ? 'bg-green-50 text-green-700 border-green-200'
+                              : b.status === 'Cancelled'
+                              ? 'bg-red-50 text-red-600 border-red-200'
+                              : 'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}>
+                            {b.status}
+                          </span>
+                        </motion.div>
+                      ))}
+
+                      {/* Upcoming section header */}
+                      {upcomingBookings.length > 0 && (
+                        <div className="px-6 py-2 bg-blue-50/40">
+                          <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Upcoming Reservations</span>
+                        </div>
+                      )}
+
+                      {upcomingBookings.map((b, idx) => (
+                        <motion.div
+                          key={b.id}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.15 + idx * 0.04 }}
+                          className="flex items-center gap-4 px-6 py-3.5 hover:bg-cream-50/60 transition-colors group"
+                        >
+                          {/* Date pill */}
+                          <div className="shrink-0 w-16 text-center">
+                            <div className="bg-cream-100 border border-cream-200 rounded-lg px-1 py-1">
+                              <p className="text-[9px] font-bold text-brown-500 uppercase">
+                                {new Date(b.bookingDate).toLocaleDateString('en-IN', { month: 'short' })}
+                              </p>
+                              <p className="text-base font-black text-brown-900 leading-none">
+                                {new Date(b.bookingDate).getDate()}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Guest avatar */}
+                          <div className="w-8 h-8 rounded-full bg-brown-100 flex items-center justify-center shrink-0 text-brown-700 font-bold text-xs border border-cream-200">
+                            {(b.user?.name || b.userName || '?')[0].toUpperCase()}
+                          </div>
+
+                          {/* Details */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-brown-900 truncate">
+                              {b.user?.name || b.userName || 'Guest'}
+                            </p>
+                            <p className="text-[11px] text-brown-500 truncate flex items-center gap-2">
+                              <span className="flex items-center gap-1"><Clock size={10} />{b.bookingTime}</span>
+                              <span className="flex items-center gap-1"><Users size={10} />{b.peopleCount} guests</span>
+                              {b.table?.tableNumber && <span className="flex items-center gap-1"><LayoutGrid size={10} />Table {b.table.tableNumber}</span>}
+                            </p>
+                          </div>
+
+                          {/* Status */}
+                          <span className={`shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full border ${
+                            b.status === 'Confirmed'
+                              ? 'bg-green-50 text-green-700 border-green-200'
+                              : 'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}>
+                            {b.status}
+                          </span>
+                        </motion.div>
+                      ))}
+
+                      {/* Footer CTA */}
+                      {bookings.length > 10 && (
+                        <div className="px-6 py-3 bg-cream-50/50 text-center">
+                          <button
+                            onClick={() => setActiveTab('bookings')}
+                            className="text-xs font-bold text-gold-600 hover:text-gold-500 transition-colors cursor-pointer flex items-center gap-1 mx-auto"
+                          >
+                            View all {bookings.length} bookings <ArrowRight size={12} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {loadingAnalytics ? (
               <div className="bg-white rounded-3xl border border-cream-200 shadow-sm p-16 text-center">
@@ -849,11 +987,10 @@ const AdminDashboard = () => {
                       <p className="text-sm text-brown-600 line-clamp-2 mb-4">{r.description}</p>
 
                       {/* Quick stats */}
-                      <div className="grid grid-cols-4 gap-2 mb-4">
+                      <div className="grid grid-cols-3 gap-2 mb-4">
                         {[
                           { label: 'Tables', value: r.tables?.length || 0, icon: LayoutGrid },
                           { label: 'Bookings', value: bookings.filter(b => b.restaurant?.name === r.name).length, icon: Ticket },
-                          { label: 'Queue', value: r.queueCount, icon: Users },
                           { label: 'Hours', value: `${r.openingTime || '10:00'}-${r.closingTime || '22:00'}`, icon: Clock, small: true }
                         ].map(s => (
                           <div key={s.label} className="bg-cream-100/80 rounded-xl p-2.5 text-center">
@@ -862,17 +999,6 @@ const AdminDashboard = () => {
                             <p className="text-[10px] text-brown-500 uppercase">{s.label}</p>
                           </div>
                         ))}
-                      </div>
-
-                      {/* Crowd status */}
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-xs text-brown-500">Crowd Level</span>
-                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                          r.crowdLevel === 'Full' ? 'bg-red-100 text-red-700' :
-                          r.crowdLevel === 'High' ? 'bg-orange-100 text-orange-700' :
-                          r.crowdLevel === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-green-100 text-green-700'
-                        }`}>{r.crowdLevel}</span>
                       </div>
 
                       {/* Action buttons */}
@@ -1361,8 +1487,8 @@ const AdminDashboard = () => {
 
       {/* Modals */}
       <AnimatePresence>
-        {showAddForm && <AddRestaurantForm onClose={() => setShowAddForm(false)} onSuccess={handleAddSuccess} isDemoMode={isDemoMode} />}
-        {editRestaurant && <EditRestaurantForm restaurant={editRestaurant} onClose={() => setEditRestaurant(null)} onSuccess={handleEditSuccess} isDemoMode={isDemoMode} />}
+        {showAddForm && <AddRestaurantForm onClose={() => setShowAddForm(false)} onSuccess={handleAddSuccess} />}
+        {editRestaurant && <EditRestaurantForm restaurant={editRestaurant} onClose={() => setEditRestaurant(null)} onSuccess={handleEditSuccess} />}
       </AnimatePresence>
 
       {/* Delete Confirmation */}

@@ -315,7 +315,7 @@ const ProfilePage = () => {
                     <div className="space-y-0 border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-100">
                       {[
                         { id: 'notifConfirmations', state: notifConfirmations, setter: setNotifConfirmations, icon: '📅', title: 'Email Booking Confirmations', desc: 'Receive instant notifications when your table reservation is successfully confirmed.' },
-                        { id: 'notifCoupons', state: notifCoupons, setter: setNotifCoupons, icon: '🎫', title: 'Promotional & Discount Alerts', desc: 'Stay updated with new discount coupon opportunities and puzzle games.' },
+                        { id: 'notifCoupons', state: notifCoupons, setter: setNotifCoupons, icon: '🎫', title: 'Promotional & Discount Alerts', desc: 'Stay updated with new discount coupon opportunities and special dining offers.' },
                         { id: 'notifWeekly', state: notifWeekly, setter: setNotifWeekly, icon: '🍽️', title: 'Weekly Culinary Recommendations', desc: 'Receive curated dining suggestions and top restaurants based on your preferences.' },
                       ].map((toggle) => (
                         <div key={toggle.id} className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-stone-50/40 transition-colors">

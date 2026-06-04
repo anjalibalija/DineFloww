@@ -51,14 +51,15 @@ exports.getMyRestaurants = async (req, res) => {
 exports.createRestaurant = async (req, res) => {
   try {
     const {
-      name, description, cuisine, location, city, state, pincode,
+      name, description, cuisine, cuisines, location, city, state, pincode,
       phone, email, ownerName, latitude, longitude, priceRange,
-      openingTime, closingTime, menuHighlights, tableCategories,
-      image, crowdLevel, queueCount, rating
+      openingTime, closingTime, menuHighlights, highlights, amenities,
+      seatingAreas, tableTypes, operatingHours, coverImage, image, gallery,
+      reservationSettings, socialLinks, verification, crowdLevel, queueCount, rating
     } = req.body;
 
-    if (!name || !description || !cuisine || !location) {
-      return res.status(400).json({ success: false, message: 'Name, description, cuisine, and location are required.' });
+    if (!name || !description || !location) {
+      return res.status(400).json({ success: false, message: 'Name, description, and location are required.' });
     }
 
     // Enforce single restaurant restriction per admin
@@ -69,13 +70,31 @@ exports.createRestaurant = async (req, res) => {
       return res.status(400).json({ success: false, message: 'You have already registered a restaurant. Admins can only manage one restaurant.' });
     }
 
+    // Parse array fallbacks for backward compatibility
+    const finalCuisines = Array.isArray(cuisines) && cuisines.length > 0 
+      ? cuisines 
+      : (cuisine ? cuisine.split(',').map(c => c.trim()).filter(Boolean) : ['Fine Dining']);
+    
+    const finalCuisine = finalCuisines.join(', ');
 
+    const finalMenuHighlights = Array.isArray(menuHighlights) 
+      ? menuHighlights 
+      : (typeof menuHighlights === 'string' ? menuHighlights.split('\n').map(h => h.trim().replace(/^\*\s*/, '')).filter(Boolean) : []);
+
+    const finalHighlights = Array.isArray(highlights) 
+      ? highlights 
+      : (req.body.tableCategories ? req.body.tableCategories.split(',').map(h => h.trim()).filter(Boolean) : []);
+
+    const finalAmenities = Array.isArray(amenities) ? amenities : [];
+
+    const finalCoverImage = coverImage || image || 'no-photo.jpg';
 
     const restaurant = await prisma.restaurant.create({
       data: {
         name,
         description,
-        cuisine,
+        cuisine: finalCuisine,
+        cuisines: finalCuisines,
         location,
         city: city || '',
         state: state || '',
@@ -88,9 +107,18 @@ exports.createRestaurant = async (req, res) => {
         priceRange: priceRange || '$$',
         openingTime: openingTime || '10:00',
         closingTime: closingTime || '22:00',
-        menuHighlights: menuHighlights || '',
-        tableCategories: tableCategories || '',
-        image: image || 'no-photo.jpg',
+        menuHighlights: finalMenuHighlights,
+        highlights: finalHighlights,
+        amenities: finalAmenities,
+        seatingAreas: seatingAreas || null,
+        tableTypes: tableTypes || null,
+        operatingHours: operatingHours || null,
+        coverImage: finalCoverImage,
+        image: finalCoverImage,
+        gallery: gallery || null,
+        reservationSettings: reservationSettings || null,
+        socialLinks: socialLinks || null,
+        verification: verification || null,
         crowdLevel: crowdLevel || 'Low',
         queueCount: queueCount ? parseInt(queueCount, 10) : 0,
         rating: rating ? parseFloat(rating) : null,
@@ -115,12 +143,38 @@ exports.updateRestaurant = async (req, res) => {
       return res.status(403).json({ success: false, message: 'You can only edit your own restaurants.' });
     }
 
-    // Parse numeric fields if present
     const updateData = { ...req.body };
+    
+    // Parse numeric fields if present
     if (updateData.latitude) updateData.latitude = parseFloat(updateData.latitude);
     if (updateData.longitude) updateData.longitude = parseFloat(updateData.longitude);
     if (updateData.queueCount) updateData.queueCount = parseInt(updateData.queueCount, 10);
     if (updateData.rating) updateData.rating = parseFloat(updateData.rating);
+
+    // Sync arrays and backward compatibility strings
+    if (updateData.cuisines) {
+      updateData.cuisine = Array.isArray(updateData.cuisines) ? updateData.cuisines.join(', ') : String(updateData.cuisines);
+    } else if (updateData.cuisine && !updateData.cuisines) {
+      updateData.cuisines = updateData.cuisine.split(',').map(c => c.trim()).filter(Boolean);
+    }
+
+    if (updateData.menuHighlights) {
+      if (typeof updateData.menuHighlights === 'string') {
+        updateData.menuHighlights = updateData.menuHighlights.split('\n').map(h => h.trim().replace(/^\*\s*/, '')).filter(Boolean);
+      }
+    }
+
+    if (updateData.highlights) {
+      if (typeof updateData.highlights === 'string') {
+        updateData.highlights = updateData.highlights.split(',').map(h => h.trim()).filter(Boolean);
+      }
+    }
+
+    if (updateData.coverImage || updateData.image) {
+      const img = updateData.coverImage || updateData.image;
+      updateData.coverImage = img;
+      updateData.image = img;
+    }
 
     const updated = await prisma.restaurant.update({
       where: { id: req.params.id },

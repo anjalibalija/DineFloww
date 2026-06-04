@@ -228,7 +228,8 @@ const Dashboard = () => {
   const [toastMsg, setToastMsg] = useState('');
   
   // Data states
-  const [bookings, setBookings] = useState([]);
+  const bookings = [];
+  const setBookings = () => {};
   const [favorites, setFavorites] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [coupons, setCoupons] = useState([]);
@@ -277,14 +278,8 @@ const Dashboard = () => {
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     try {
-      // 1. Fetch reservations
+      // 1. Fetch reservations (Removed)
       let userBookings = [];
-      try {
-        const bookingsRes = await axios.get('/api/bookings/my');
-        userBookings = bookingsRes.data.data || [];
-      } catch (err) {
-        console.error('Failed to fetch bookings:', err.message);
-      }
 
       // 2. Fetch favorites
       let userFavs = [];
@@ -314,14 +309,14 @@ const Dashboard = () => {
       }
 
       // Populate database values or fall back to mock data if empty (satisfying empty-state protection)
-      setBookings(userBookings.length > 0 ? userBookings : MOCK_BOOKINGS);
+      setBookings(userBookings);
       setFavorites(userFavs.length > 0 ? userFavs : MOCK_FAVORITES);
       setReviews(userReviews.length > 0 ? userReviews : MOCK_REVIEWS);
       setCoupons(userCoupons.length > 0 ? userCoupons : MOCK_COUPONS);
       
     } catch (err) {
       // Complete offline fallback in case of CORS or connectivity failures
-      setBookings(MOCK_BOOKINGS);
+      setBookings([]);
       setFavorites(MOCK_FAVORITES);
       setReviews(MOCK_REVIEWS);
       setCoupons(MOCK_COUPONS);
@@ -573,7 +568,7 @@ const Dashboard = () => {
               Patron Dashboard
             </h1>
             <p className="text-xs md:text-sm text-[#C5A880] font-light max-w-md">
-              Review dinner schedules, explore table seating layouts, unlock exclusive coupon rewards, and check dining analytics.
+              Review saved favorites, explore table seating layouts, unlock exclusive coupon rewards, and check dining analytics.
             </p>
           </div>
 
@@ -602,7 +597,6 @@ const Dashboard = () => {
         <div className="flex bg-white/60 backdrop-blur-md border border-white/40 p-2 rounded-2xl shadow-sm mb-8 overflow-x-auto gap-2 items-center justify-start scrollbar-none">
           {[
             { id: 'overview', label: 'Dashboard Home', icon: LayoutGrid },
-            { id: 'bookings', label: 'My Reservations', icon: Calendar },
             { id: 'favorites', label: 'Saved Favorites', icon: Heart },
             { id: 'reviews', label: 'Dining Reviews', icon: MessageSquare },
             { id: 'coupons', label: 'Rewards & Coupons', icon: Ticket }
@@ -664,7 +658,7 @@ const Dashboard = () => {
                         Welcome Back, {user?.name?.split(' ')[0] || 'Patron'}
                       </h2>
                       <p className="text-xs text-stone-400 font-light">
-                        Review your dining activity, schedule reservations, and check points balance.
+                        Review your dining activity, manage favorites, and check points balance.
                       </p>
                     </div>
                     <span className="px-4 py-1.5 rounded-full bg-[#FAF6EE] text-[#D4AF37] border border-[#D4AF37]/20 text-[10px] font-bold uppercase tracking-wider">
@@ -687,47 +681,11 @@ const Dashboard = () => {
                     </div>
                   )}
 
-                  {/* Upcoming Dinner Countdown Banner */}
-                  {upcomingBooking && (
-                    <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-[#D4AF37]/30 p-5 rounded-3xl text-left flex flex-col sm:flex-row items-center justify-between gap-4 relative overflow-hidden shadow-sm">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-[#2C1B18] text-[#D4AF37] flex items-center justify-center border border-[#D4AF37]/20 shrink-0">
-                          <Clock size={20} className="animate-pulse" />
-                        </div>
-                        <div className="space-y-0.5">
-                          <span className="text-[9px] uppercase font-black text-[#D4AF37] tracking-widest block">Upcoming Dining Experience</span>
-                          <h4 className="font-serif font-black text-md text-[#2C1B18]">
-                            {upcomingBooking.restaurantName || upcomingBooking.restaurant?.name}
-                          </h4>
-                          <p className="text-[10px] text-stone-500">
-                            📍 {upcomingBooking.location || upcomingBooking.restaurant?.location} • 👥 {upcomingBooking.guests || upcomingBooking.peopleCount} guests
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right flex sm:flex-col items-center sm:items-end gap-2 sm:gap-0 font-sans shrink-0">
-                        <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Scheduled for</span>
-                        <span className="text-sm font-black text-[#2C1B18]">
-                          {upcomingBooking.date || new Date(upcomingBooking.bookingDate).toLocaleDateString()} at {upcomingBooking.time || upcomingBooking.bookingTime}
-                        </span>
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <span className="text-xs text-amber-700 bg-amber-50 px-3 py-1 border border-amber-200/50 rounded-full font-bold block">
-                            {getCountdownText(upcomingBooking.date || upcomingBooking.bookingDate)}
-                          </span>
-                          <button
-                            onClick={() => setDigitalPassBooking(upcomingBooking)}
-                            className="bg-[#2C1B18] hover:bg-[#D4AF37] text-white hover:text-[#2C1B18] border border-[#2C1B18] hover:border-[#D4AF37] px-3 py-1 rounded-full text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
-                          >
-                            <QrCode size={10} /> Digital Pass
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+
 
                   {/* Stats Grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {[
-                      { label: 'My Bookings', value: bookings.length, icon: Calendar, color: 'text-indigo-500', bg: 'bg-indigo-50' },
                       { label: 'Favorites', value: favorites.length, icon: Heart, color: 'text-rose-500', bg: 'bg-rose-50' },
                       { label: 'Gourmet Points', value: loyaltyPoints, icon: Award, color: 'text-[#D4AF37]', bg: 'bg-amber-50' },
                       { label: 'My Reviews', value: reviews.length, icon: MessageSquare, color: 'text-emerald-500', bg: 'bg-emerald-50' }
@@ -887,59 +845,7 @@ const Dashboard = () => {
                         </div>
                       </div>
 
-                      {/* Patron Dining Timeline (Vertical activity log) */}
-                      <div className="bg-white border border-white rounded-3xl p-6 shadow-sm text-left space-y-4">
-                        <div className="flex justify-between items-center">
-                          <h3 className="font-serif font-bold text-md text-[#2C1B18] flex items-center gap-1.5">
-                            <Clock size={16} className="text-[#D4AF37]" />
-                            Patron Activity Timeline
-                          </h3>
-                          <button
-                            onClick={() => setActiveTab('bookings')}
-                            className="text-[10px] font-bold text-[#D4AF37] hover:underline"
-                          >
-                            View all bookings
-                          </button>
-                        </div>
 
-                        {bookings.length === 0 ? (
-                          <p className="text-stone-400 text-xs py-8 text-center font-light">
-                            No dining history timeline logged yet. Reserving a table will start your timeline.
-                          </p>
-                        ) : (
-                          <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-[#D4AF37]/20">
-                            {bookings.map((b, bIdx) => {
-                              const status = (b.status || '').toLowerCase();
-                              let color = 'bg-[#D4AF37]';
-                              let title = `Booking Scheduled at ${b.restaurantName || b.restaurant?.name}`;
-                              let desc = `Table ${b.tableNumber || b.table?.tableNumber || 'Auto'} reserved for ${b.guests || b.peopleCount} guests.`;
-                              
-                              if (status === 'completed') {
-                                color = 'bg-emerald-500';
-                                title = `Dine-out Completed at ${b.restaurantName || b.restaurant?.name}`;
-                                desc = `Successfully completed your reservation. Earned rewards points.`;
-                              } else if (status === 'cancelled') {
-                                color = 'bg-red-500';
-                                title = `Reservation Cancelled at ${b.restaurantName || b.restaurant?.name}`;
-                                desc = `Cancelled. Table inventory freed back to the public pool.`;
-                              }
-
-                              return (
-                                <div key={b.id || bIdx} className="relative space-y-1 text-left">
-                                  <span className={`absolute -left-[22px] top-1 w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm ${color} ${status === 'confirmed' || status === 'pending' ? 'animate-pulse' : ''}`} />
-                                  <div className="flex justify-between items-baseline gap-2">
-                                    <h4 className="font-bold text-xs text-[#2C1B18]">{title}</h4>
-                                    <span className="text-[8px] text-stone-400 font-medium shrink-0">
-                                      {b.date || new Date(b.bookingDate).toLocaleDateString()}
-                                    </span>
-                                  </div>
-                                  <p className="text-[10px] text-stone-500 font-light leading-snug">{desc}</p>
-                                </div>
-                              );
-                            }).slice(0, 4)}
-                          </div>
-                        )}
-                      </div>
                     </div>
 
                     {/* Right Column: Gourmet Dining Insights & Achievements */}
@@ -1489,7 +1395,7 @@ const Dashboard = () => {
                       <div className="py-10 text-center space-y-3">
                         <Ticket size={36} className="mx-auto text-stone-300 animate-pulse" />
                         <p className="text-stone-400 text-xs max-w-xs mx-auto">
-                          No coupons currently assigned. Solve puzzles to unlock elite promotional discounts!
+                          No coupons currently assigned. Check back later for new promotional discounts!
                         </p>
                       </div>
                     ) : (
@@ -1565,7 +1471,7 @@ const Dashboard = () => {
                             { id: "tx-1", date: "24 May 2026", desc: "Dine-out at Spice Route (Rooftop Seating Completed)", cat: "Table Reservation", pts: "+50 PTS", type: "earn" },
                             { id: "tx-2", date: "18 May 2026", desc: "Authored dining feedback for Kyoto Garden", cat: "Patron Review", pts: "+25 PTS", type: "earn" },
                             { id: "tx-3", date: "15 May 2026", desc: "Redeemed welcome coupon promo WELCOMEFLOW25", cat: "Coupon Burn", pts: "-50 PTS", type: "burn" },
-                            { id: "tx-4", date: "12 May 2026", desc: "Completed Level 3 Block sliding puzzle game", cat: "Gourmet Game", pts: "+75 PTS", type: "earn" },
+                            { id: "tx-4", date: "12 May 2026", desc: "Dine-out at Trikal Cafe (Main Seating Completed)", cat: "Table Reservation", pts: "+50 PTS", type: "earn" },
                             { id: "tx-5", date: "01 May 2026", desc: "DineFlow Gourmet welcome points bonus", cat: "Welcome Bonus", pts: "+150 PTS", type: "earn" }
                           ].map((tx) => (
                             <tr key={tx.id} className="hover:bg-[#FAF6EE]/30 transition">
@@ -1580,25 +1486,6 @@ const Dashboard = () => {
                         </tbody>
                       </table>
                     </div>
-                  </div>
-
-                  {/* Gourmet puzzle teaser widget */}
-                  <div className="bg-gradient-to-r from-amber-50/50 via-gold-50/20 to-transparent border border-[#D4AF37]/15 rounded-3xl p-6 text-left flex flex-col md:flex-row items-center gap-6 shadow-sm">
-                    <div className="bg-[#2C1B18] text-[#D4AF37] p-3 rounded-2xl shrink-0 shadow">
-                      <Sparkles size={24} className="animate-pulse" />
-                    </div>
-                    <div className="space-y-1 flex-1">
-                      <h4 className="font-serif font-bold text-[#2C1B18] text-sm">Elite Rewards Puzzle Box</h4>
-                      <p className="text-xs text-stone-500 leading-relaxed font-light font-sans max-w-xl">
-                        Unlock up to 50% discount on booking fees! Test your dining intelligence in our exclusive sliding block puzzle game and claim custom vouchers instantly.
-                      </p>
-                    </div>
-                    <Link
-                      to="/puzzle"
-                      className="bg-[#2C1B18] hover:bg-[#D4AF37] text-white hover:text-[#2C1B18] px-5 py-2.5 rounded-xl text-xs font-bold transition shadow-sm whitespace-nowrap self-stretch md:self-auto text-center"
-                    >
-                      Play Puzzle 🧩
-                    </Link>
                   </div>
                 </div>
               )}

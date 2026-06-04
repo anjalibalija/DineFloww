@@ -44,6 +44,7 @@ model Restaurant {
   name            String
   description     String
   cuisine         String
+  cuisines        String[] @default([])
   location        String
   city            String   @default("")
   state           String   @default("")
@@ -56,7 +57,21 @@ model Restaurant {
   priceRange      String   @default("$$")
   openingTime     String   @default("10:00")
   closingTime     String   @default("22:00")
-  menuHighlights  String   @default("")
+  menuHighlights  String[] @default([])
+  highlights      String[] @default([])
+  amenities       String[] @default([])
+  
+  seatingAreas    Json?    
+  tableTypes      Json?    
+  operatingHours  Json?    
+  
+  coverImage      String   @default("")
+  gallery         Json?    
+  
+  reservationSettings Json? 
+  socialLinks         Json? 
+  verification        Json? 
+
   tableCategories String   @default("")
   rating          Float?
   image           String   @default("no-photo.jpg")

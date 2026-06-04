@@ -275,28 +275,13 @@ const RestaurantListing = () => {
     setLocationStatus('Accessing GPS…');
     setNearMeActive(false);
 
-    navigator.geolocation.getCurrentPosition(
+        navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
         setUserCoords({ latitude, longitude });
         setNearMeActive(true);
-        setLocationStatus('Sorting by distance…');
-        setLocationQuery('Current Location');
-
-        try {
-          const res = await axios.post('/api/ai/reverse-geocode', { latitude, longitude });
-          if (res.data.success) {
-            const { city, state } = res.data.data;
-            const resolved = city || state || '';
-            if (resolved) {
-              setLocationQuery(resolved);
-            }
-          }
-        } catch {
-          // GPS distance-sort is still active even if reverse geocode fails
-        }
-
         setLocationStatus('');
+        setLocationQuery('Current Location');
         setLocating(false);
       },
       (err) => {

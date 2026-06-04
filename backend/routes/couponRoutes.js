@@ -1,13 +1,12 @@
 const express = require('express');
-const { generateCoupon, getMyCoupons, getPuzzle, verifyPuzzle } = require('../controllers/couponController');
+const { generateCoupon, getMyCoupons, validateCoupon, redeemCoupon } = require('../controllers/couponController');
 const { protect } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.get('/puzzle', getPuzzle);
-router.post('/puzzle/verify', verifyPuzzle);
-
-router.post('/coupons/generate', protect, generateCoupon);
-router.get('/coupons/my', protect, getMyCoupons);
+router.post('/coupons/generate',  protect, generateCoupon);
+router.get('/coupons/my',         protect, getMyCoupons);
+router.post('/coupons/validate',  protect, validateCoupon);
+router.post('/coupons/redeem',    protect, redeemCoupon);
 
 module.exports = router;

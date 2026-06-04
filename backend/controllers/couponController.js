@@ -1,72 +1,7 @@
 const prisma = require('../prisma/client');
 const crypto = require('crypto');
 
-const PUZZLES = [
-  { id: '1', question: "I am always hungry, I must always be fed. The finger I touch, will soon turn red. What am I?", hint: "Think about elements.", answer: "fire" },
-  { id: '2', question: "The more of them you take, the more you leave behind. What are they?", hint: "You make them when you walk.", answer: "footsteps" },
-  { id: '3', question: "I have keys but no locks. I have space but no room. You can enter but can't go outside. What am I?", hint: "You are using it right now to type.", answer: "keyboard" },
-  { id: '4', question: "What runs all around a backyard, yet never moves?", hint: "It bounds your property.", answer: "fence" },
-  { id: '5', question: "What has hands but cannot clap?", hint: "It tells the time.", answer: "clock" },
-  { id: '6', question: "What has a head and a tail but no body?", hint: "It's a form of currency.", answer: "coin" },
-  { id: '7', question: "What is full of holes but still holds water?", hint: "You use it in the kitchen or bath.", answer: "sponge" },
-  { id: '8', question: "What belongs to you, but other people use it more than you do?", hint: "It's how people address you.", answer: "name" },
-  { id: '9', question: "I speak without a mouth and hear without ears. I have no body, but I come alive with wind. What am I?", hint: "Mountains do this.", answer: "echo" },
-  { id: '10', question: "What gets wetter as it dries?", hint: "You use it after a shower.", answer: "towel" }
-];
-
-exports.getPuzzle = (req, res) => {
-  const randomPuzzle = PUZZLES[Math.floor(Math.random() * PUZZLES.length)];
-  res.status(200).json({
-    success: true,
-    data: { id: randomPuzzle.id, question: randomPuzzle.question, hint: randomPuzzle.hint }
-  });
-};
-
-exports.verifyPuzzle = (req, res) => {
-  const { puzzleId, answer } = req.body;
-  if (!answer) return res.status(400).json({ success: false, message: 'Answer is required' });
-  if (!puzzleId) {
-    if (answer.toLowerCase().trim() === 'fire') return res.status(200).json({ success: true, message: 'Correct answer!' });
-    return res.status(400).json({ success: false, message: 'Incorrect answer. Try again!' });
-  }
-  const puzzle = PUZZLES.find(p => p.id === puzzleId);
-  if (!puzzle) return res.status(404).json({ success: false, message: 'Puzzle not found' });
-  if (answer.toLowerCase().trim() === puzzle.answer.toLowerCase()) {
-    res.status(200).json({ success: true, message: 'Correct answer!' });
-  } else {
-    res.status(400).json({ success: false, message: 'Incorrect answer. Try again!' });
-  }
-};
-
-exports.generateCoupon = async (req, res) => {
-  try {
-    // Prevent spamming: only 1 game coupon per 24 hours
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const recentCoupon = await prisma.coupon.findFirst({
-      where: { userId: req.user.id, createdAt: { gt: oneDayAgo } }
-    });
-    if (recentCoupon) {
-      return res.status(400).json({
-        success: false,
-        message: 'You already claimed a coupon in the last 24 hours. Come back tomorrow!'
-      });
-    }
-
-    const code = 'WAIT' + crypto.randomBytes(3).toString('hex').toUpperCase();
-    const discount = Math.floor(Math.random() * 11) + 20; // 20–30%
-    const expiry = new Date();
-    expiry.setDate(expiry.getDate() + 7);
-
-    const coupon = await prisma.coupon.create({
-      data: { code, discount, userId: req.user.id, expiry }
-    });
-
-    res.status(201).json({ success: true, data: coupon });
-  } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
-  }
-};
-
+// GET /api/coupons/my  — active, non-expired coupons for the logged-in user
 exports.getMyCoupons = async (req, res) => {
   try {
     const coupons = await prisma.coupon.findMany({
@@ -74,6 +9,124 @@ exports.getMyCoupons = async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
     res.status(200).json({ success: true, count: coupons.length, data: coupons });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+// POST /api/coupons/generate  — generate a queue-reward coupon for the logged-in user
+// Called after the user solves the puzzle when queue length >= 5
+exports.generateCoupon = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Prevent duplicate active coupons: check if user already has an unused, non-expired
+    // queue-reward coupon (code starts with "QUEUE")
+    const existing = await prisma.coupon.findFirst({
+      where: {
+        userId,
+        isUsed: false,
+        expiry: { gt: new Date() },
+        code: { startsWith: 'QUEUE' }
+      }
+    });
+
+    if (existing) {
+      return res.status(200).json({
+        success: true,
+        alreadyHad: true,
+        data: existing,
+        message: 'You already have an active queue-reward coupon!'
+      });
+    }
+
+    // Random discount between 20% and 30%
+    const discount = Math.floor(Math.random() * 11) + 20; // 20–30
+
+    // Unique coupon code: QUEUE + 8 uppercase hex chars
+    const code = 'QUEUE' + crypto.randomBytes(4).toString('hex').toUpperCase();
+
+    // Expires in 7 days
+    const expiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    const coupon = await prisma.coupon.create({
+      data: { code, discount, userId, expiry }
+    });
+
+    res.status(201).json({
+      success: true,
+      data: coupon,
+      message: `🎉 Coupon generated! Use code ${code} for ${discount}% off your booking.`
+    });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+// POST /api/coupons/validate  — validate a coupon code at checkout (does NOT mark it used yet)
+exports.validateCoupon = async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) {
+      return res.status(400).json({ success: false, message: 'Coupon code is required.' });
+    }
+
+    const coupon = await prisma.coupon.findFirst({
+      where: { code: code.toUpperCase().trim(), userId: req.user.id }
+    });
+
+    if (!coupon) {
+      return res.status(404).json({ success: false, message: 'Coupon not found or does not belong to your account.' });
+    }
+    if (coupon.isUsed) {
+      return res.status(400).json({ success: false, message: 'This coupon has already been redeemed.' });
+    }
+    if (coupon.expiry < new Date()) {
+      return res.status(400).json({ success: false, message: 'This coupon has expired.' });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { code: coupon.code, discount: coupon.discount, expiry: coupon.expiry },
+      message: `Coupon valid! ${coupon.discount}% discount will be applied.`
+    });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+// POST /api/coupons/redeem  — mark coupon as used after successful payment
+exports.redeemCoupon = async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) {
+      return res.status(400).json({ success: false, message: 'Coupon code is required.' });
+    }
+
+    const coupon = await prisma.coupon.findFirst({
+      where: { code: code.toUpperCase().trim(), userId: req.user.id }
+    });
+
+    if (!coupon) {
+      return res.status(404).json({ success: false, message: 'Coupon not found.' });
+    }
+    if (coupon.isUsed) {
+      return res.status(400).json({ success: false, message: 'Coupon already redeemed.' });
+    }
+    if (coupon.expiry < new Date()) {
+      return res.status(400).json({ success: false, message: 'Coupon has expired.' });
+    }
+
+    const updated = await prisma.coupon.update({
+      where: { id: coupon.id },
+      data: { isUsed: true }
+    });
+
+    res.status(200).json({
+      success: true,
+      data: updated,
+      message: 'Coupon redeemed successfully!'
+    });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }

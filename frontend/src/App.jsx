@@ -15,7 +15,6 @@ import RestaurantDetail from './pages/RestaurantDetail';
 import TableBlueprintPage from './pages/TableBlueprintPage';
 import Dashboard from './pages/Dashboard';
 import ProfilePage from './pages/ProfilePage';
-import PuzzlePage from './pages/PuzzlePage';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminProfilePage from './pages/AdminProfilePage';
 
@@ -101,11 +100,7 @@ function AppRoutes() {
               <ProfilePage />
             </UserRoute>
           } />
-          <Route path="/puzzle" element={
-            <PrivateRoute>
-              <PuzzlePage />
-            </PrivateRoute>
-          } />
+
 
           <Route path="/admin/dashboard" element={
             <AdminRoute>
