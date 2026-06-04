@@ -2,7 +2,8 @@ const express = require('express');
 const {
   getTablesByRestaurant,
   createTable,
-  updateTable
+  updateTable,
+  bulkSetTables
 } = require('../controllers/tableController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -13,8 +14,11 @@ const router = express.Router({ mergeParams: true });
 // Usually /api/restaurants/:id/tables -> we handle it here or in server.js
 // We'll export the router and mount it in server.js accordingly.
 
+router.post('/bulk', protect, authorize('admin'), bulkSetTables);
+
 router
   .route('/')
+
   .get(getTablesByRestaurant)
   .post(protect, authorize('admin'), createTable);
 

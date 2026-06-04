@@ -75,25 +75,25 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
     cuisines: [],
     
     operatingHours: [
-      { day: 'Monday', open: '10:00', close: '22:00', closed: false },
-      { day: 'Tuesday', open: '10:00', close: '22:00', closed: false },
-      { day: 'Wednesday', open: '10:00', close: '22:00', closed: false },
-      { day: 'Thursday', open: '10:00', close: '22:00', closed: false },
-      { day: 'Friday', open: '10:00', close: '22:00', closed: false },
-      { day: 'Saturday', open: '10:00', close: '22:00', closed: false },
-      { day: 'Sunday', open: '10:00', close: '22:00', closed: false }
+      { day: 'Monday', open: '10:00', close: '22:00', closed: false, is24h: false, hasSplitShift: false, open2: '17:00', close2: '23:00' },
+      { day: 'Tuesday', open: '10:00', close: '22:00', closed: false, is24h: false, hasSplitShift: false, open2: '17:00', close2: '23:00' },
+      { day: 'Wednesday', open: '10:00', close: '22:00', closed: false, is24h: false, hasSplitShift: false, open2: '17:00', close2: '23:00' },
+      { day: 'Thursday', open: '10:00', close: '22:00', closed: false, is24h: false, hasSplitShift: false, open2: '17:00', close2: '23:00' },
+      { day: 'Friday', open: '10:00', close: '22:00', closed: false, is24h: false, hasSplitShift: false, open2: '17:00', close2: '23:00' },
+      { day: 'Saturday', open: '10:00', close: '22:00', closed: false, is24h: false, hasSplitShift: false, open2: '17:00', close2: '23:00' },
+      { day: 'Sunday', open: '10:00', close: '22:00', closed: false, is24h: false, hasSplitShift: false, open2: '17:00', close2: '23:00' }
     ],
     
     avgCostForTwo: '',
     priceCategory: 'Mid-range',
     
     seatingAreas: [
-      { name: 'Indoor Seating', description: 'Cozy and elegant indoor dining room', image: '' }
+      { name: 'Indoor Seating', description: 'Cozy and elegant indoor dining room', image: '', hasAirPurifier: false, premiumCharge: 0 }
     ],
     
     tableTypes: [
-      { name: '2 Seater', capacity: 2, quantity: 4, seatingArea: 'Indoor Seating' },
-      { name: '4 Seater', capacity: 4, quantity: 6, seatingArea: 'Indoor Seating' }
+      { name: '2 Seater', capacity: 2, quantity: 4, seatingArea: 'Indoor Seating', shape: 'Square', isVip: false, isBestseller: false },
+      { name: '4 Seater', capacity: 4, quantity: 6, seatingArea: 'Indoor Seating', shape: 'Square', isVip: false, isBestseller: false }
     ],
     
     amenities: [],
@@ -104,46 +104,11 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
     customMenuHighlight: '',
     
     coverImage: '',
-    gallery: [],
-    
-    reservationSettings: {
-      acceptsReservations: true,
-      advanceBookingRequired: false,
-      minGroupSize: 1,
-      maxGroupSize: 20,
-      reservationDuration: 120,
-      cancellationWindow: 24
-    },
-    
-    socialLinks: {
-      instagram: '',
-      facebook: '',
-      website: '',
-      googleMaps: ''
-    },
-    
-    verification: {
-      gstNumber: '',
-      fssaiNumber: '',
-      status: 'Pending'
-    }
+    gallery: []
   });
 
-  const [activeSections, setActiveSections] = useState({
-    info: true,
-    location: false,
-    cuisines: false,
-    hours: false,
-    pricing: false,
-    seating: false,
-    tables: false,
-    amenities: false,
-    menu: false,
-    gallery: false,
-    reservations: false,
-    socials: false,
-    verification: false
-  });
+  // Single active section state for accordion mode
+  const [activeSection, setActiveSection] = useState('info');
 
   const [errors, setErrors] = useState({});
   const [globalError, setGlobalError] = useState('');
@@ -151,7 +116,7 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
   const [submitting, setSubmitting] = useState(false);
 
   const toggleSection = (section) => {
-    setActiveSections(prev => ({ ...prev, [section]: !prev[section] }));
+    setActiveSection(prev => prev === section ? '' : section);
   };
 
   const handleFieldChange = (e) => {
@@ -159,16 +124,6 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
     if (errors[e.target.name]) {
       setErrors(prev => ({ ...prev, [e.target.name]: null }));
     }
-  };
-
-  const handleNestedChange = (e, category) => {
-    setForm(prev => ({
-      ...prev,
-      [category]: {
-        ...prev[category],
-        [e.target.name]: e.target.type === 'checkbox' ? e.target.checked : e.target.value
-      }
-    }));
   };
 
   const detectCoordinates = () => {
@@ -223,17 +178,21 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
         ...d,
         open: monday.open,
         close: monday.close,
-        closed: monday.closed
+        closed: monday.closed,
+        is24h: monday.is24h,
+        hasSplitShift: monday.hasSplitShift,
+        open2: monday.open2,
+        close2: monday.close2
       }))
     }));
-    showToast("Copied Monday's hours to all days!");
+    showToast("Copied Monday's hours (with advanced settings) to all days!");
   };
 
   // Seating Areas Dynamic List
   const addSeatingArea = () => {
     setForm(prev => ({
       ...prev,
-      seatingAreas: [...prev.seatingAreas, { name: '', description: '', image: '' }]
+      seatingAreas: [...prev.seatingAreas, { name: '', description: '', image: '', hasAirPurifier: false, premiumCharge: 0 }]
     }));
   };
 
@@ -254,10 +213,9 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
 
   // Table Types Dynamic List
   const addTableType = () => {
-    const defaultArea = form.seatingAreas[0]?.name || '';
     setForm(prev => ({
       ...prev,
-      tableTypes: [...prev.tableTypes, { name: '', capacity: 2, quantity: 1, seatingArea: defaultArea }]
+      tableTypes: [...prev.tableTypes, { name: '', capacity: 2, quantity: 1, seatingArea: 'Indoor Seating', shape: 'Square', isVip: false, isBestseller: false }]
     }));
   };
 
@@ -429,29 +387,13 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
     setGlobalError('');
     if (!validateForm()) {
       setGlobalError('Please correct the validation errors in the highlighted sections.');
-      // Expand sections with errors
-      setActiveSections(prev => ({
-        ...prev,
-        info: true,
-        location: true,
-        cuisines: true,
-        gallery: true
-      }));
+      setActiveSection('info');
       return;
     }
 
     setSubmitting(true);
     try {
-      // Sync googleMaps link to socialLinks object
-      const finalForm = {
-        ...form,
-        socialLinks: {
-          ...form.socialLinks,
-          googleMaps: form.googleMapsUrl
-        }
-      };
-
-      await axios.post('/api/restaurants', finalForm);
+      await axios.post('/api/restaurants', form);
       onSuccess();
     } catch (err) {
       setGlobalError(err.response?.data?.message || 'Failed to create restaurant. Please verify all details.');
@@ -521,9 +463,9 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
 
           {/* 1. RESTAURANT INFORMATION */}
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SectionHeader id="info" label="Restaurant Information" icon={Building2} active={activeSections.info} onClick={toggleSection} />
+            <SectionHeader id="info" label="Restaurant Information" icon={Building2} active={activeSection === 'info'} onClick={toggleSection} />
             <AnimatePresence>
-              {activeSections.info && (
+              {activeSection === 'info' && (
                 <motion.div 
                   initial={{ height: 0, opacity: 0 }} 
                   animate={{ height: 'auto', opacity: 1 }} 
@@ -568,9 +510,9 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
 
           {/* 2. LOCATION */}
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SectionHeader id="location" label="Location & Coordinates" icon={MapPin} active={activeSections.location} onClick={toggleSection} />
+            <SectionHeader id="location" label="Location & Coordinates" icon={MapPin} active={activeSection === 'location'} onClick={toggleSection} />
             <AnimatePresence>
-              {activeSections.location && (
+              {activeSection === 'location' && (
                 <motion.div 
                   initial={{ height: 0, opacity: 0 }} 
                   animate={{ height: 'auto', opacity: 1 }} 
@@ -608,9 +550,9 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
 
           {/* 3. CUISINES */}
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SectionHeader id="cuisines" label="Cuisines" icon={Utensils} active={activeSections.cuisines} onClick={toggleSection} count={form.cuisines.length} />
+            <SectionHeader id="cuisines" label="Cuisines" icon={Utensils} active={activeSection === 'cuisines'} onClick={toggleSection} count={form.cuisines.length} />
             <AnimatePresence>
-              {activeSections.cuisines && (
+              {activeSection === 'cuisines' && (
                 <motion.div 
                   initial={{ height: 0, opacity: 0 }} 
                   animate={{ height: 'auto', opacity: 1 }} 
@@ -647,9 +589,9 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
 
           {/* 4. OPERATING HOURS */}
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SectionHeader id="hours" label="Operating Hours" icon={Clock} active={activeSections.hours} onClick={toggleSection} />
+            <SectionHeader id="hours" label="Operating Hours" icon={Clock} active={activeSection === 'hours'} onClick={toggleSection} />
             <AnimatePresence>
-              {activeSections.hours && (
+              {activeSection === 'hours' && (
                 <motion.div 
                   initial={{ height: 0, opacity: 0 }} 
                   animate={{ height: 'auto', opacity: 1 }} 
@@ -669,21 +611,51 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
 
                   <div className="space-y-3">
                     {form.operatingHours.map((d, index) => (
-                      <div key={d.day} className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50/50 border border-gray-100 p-3 rounded-xl gap-3">
-                        <span className="text-xs font-bold text-brown-900 sm:w-24">{d.day}</span>
-                        <div className="flex items-center gap-3">
-                          <label className="flex items-center gap-1 text-xs text-brown-800 cursor-pointer">
-                            <input 
-                              type="checkbox" 
-                              checked={d.closed} 
-                              onChange={(e) => handleHourChange(index, 'closed', e.target.checked)}
-                              className="rounded accent-gold-500" 
-                            />
-                            <span>Closed</span>
-                          </label>
+                      <div key={d.day} className="flex flex-col bg-gray-50/50 border border-gray-100 p-4 rounded-xl gap-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-brown-900 w-24">{d.day}</span>
+                          <div className="flex items-center gap-4">
+                            <label className="flex items-center gap-1 text-xs text-brown-850 cursor-pointer">
+                              <input 
+                                type="checkbox" 
+                                checked={d.closed} 
+                                onChange={(e) => handleHourChange(index, 'closed', e.target.checked)}
+                                className="rounded accent-gold-500" 
+                              />
+                              <span className="font-semibold text-gray-500">Closed</span>
+                            </label>
+                            
+                            {/* ADVANCED OPTION 1: 24h Toggle */}
+                            <label className="flex items-center gap-1 text-xs text-brown-850 cursor-pointer">
+                              <input 
+                                type="checkbox" 
+                                checked={d.is24h || false} 
+                                disabled={d.closed}
+                                onChange={(e) => handleHourChange(index, 'is24h', e.target.checked)}
+                                className="rounded accent-gold-500" 
+                              />
+                              <span className="font-bold text-gold-600">24 Hours Open (Adv)</span>
+                            </label>
 
-                          {!d.closed && (
+                            {/* ADVANCED OPTION 2: Split Shift Toggle */}
+                            <label className="flex items-center gap-1 text-xs text-brown-850 cursor-pointer">
+                              <input 
+                                type="checkbox" 
+                                checked={d.hasSplitShift || false} 
+                                disabled={d.closed || d.is24h}
+                                onChange={(e) => handleHourChange(index, 'hasSplitShift', e.target.checked)}
+                                className="rounded accent-gold-500" 
+                              />
+                              <span className="font-semibold text-brown-700 hover:text-gold-600 transition-colors">Split Shifts (Adv)</span>
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Timing Slots */}
+                        {!d.closed && !d.is24h && (
+                          <div className="bg-white p-3 rounded-xl border border-gray-100 flex flex-wrap items-center gap-4">
                             <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-semibold text-brown-700">Slot 1:</span>
                               <input 
                                 type="time" 
                                 value={d.open} 
@@ -698,8 +670,32 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
                                 className="px-2 py-1 bg-white border border-gray-200 rounded text-xs text-brown-900 focus:outline-none" 
                               />
                             </div>
-                          )}
-                        </div>
+
+                            {d.hasSplitShift && (
+                              <div className="flex items-center gap-1.5 border-l border-gray-200 pl-4">
+                                <span className="text-xs font-semibold text-brown-700">Slot 2 (Dinner):</span>
+                                <input 
+                                  type="time" 
+                                  value={d.open2} 
+                                  onChange={(e) => handleHourChange(index, 'open2', e.target.value)}
+                                  className="px-2 py-1 bg-white border border-gray-200 rounded text-xs text-brown-900 focus:outline-none" 
+                                />
+                                <span className="text-xs text-gray-400">to</span>
+                                <input 
+                                  type="time" 
+                                  value={d.close2} 
+                                  onChange={(e) => handleHourChange(index, 'close2', e.target.value)}
+                                  className="px-2 py-1 bg-white border border-gray-200 rounded text-xs text-brown-900 focus:outline-none" 
+                                />
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {!d.closed && d.is24h && (
+                          <div className="bg-gold-500/10 border border-gold-500/20 text-gold-700 text-xs px-3 py-2 rounded-xl font-semibold">
+                            🕒 Restaurant is open 24 hours continuously on this day.
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -710,9 +706,9 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
 
           {/* 5. PRICING */}
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SectionHeader id="pricing" label="Pricing" icon={IndianRupee} active={activeSections.pricing} onClick={toggleSection} />
+            <SectionHeader id="pricing" label="Pricing" icon={IndianRupee} active={activeSection === 'pricing'} onClick={toggleSection} />
             <AnimatePresence>
-              {activeSections.pricing && (
+              {activeSection === 'pricing' && (
                 <motion.div 
                   initial={{ height: 0, opacity: 0 }} 
                   animate={{ height: 'auto', opacity: 1 }} 
@@ -737,161 +733,225 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
             </AnimatePresence>
           </div>
 
-          {/* 6. SEATING AREAS */}
+          {/* 6. COMBINED SEATING LAYOUT & TABLES (with Seating Area & Table Capacity under one section + Advanced Table Features) */}
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SectionHeader id="seating" label="Seating Areas" icon={LayoutGrid} active={activeSections.seating} onClick={toggleSection} count={form.seatingAreas.length} />
+            <SectionHeader id="tables" label="Seating Layout & Tables" icon={LayoutGrid} active={activeSection === 'tables'} onClick={toggleSection} count={form.tableTypes.length} />
             <AnimatePresence>
-              {activeSections.seating && (
+              {activeSection === 'tables' && (
                 <motion.div 
                   initial={{ height: 0, opacity: 0 }} 
                   animate={{ height: 'auto', opacity: 1 }} 
                   exit={{ height: 0, opacity: 0 }}
-                  className="p-6 border-t border-gray-50 space-y-4"
+                  className="p-6 border-t border-gray-50 space-y-6"
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-brown-700/60 font-semibold"><Info size={14} className="inline mr-1" /> Dynamic layout areas (Rooftop, Indoor, Private Room)</span>
-                    <button 
-                      type="button" 
-                      onClick={addSeatingArea}
-                      className="px-3 py-1.5 border border-brown-900 hover:bg-brown-900 hover:text-cream-100 text-brown-900 text-xs font-semibold rounded-lg flex items-center gap-1 transition-all cursor-pointer"
-                    >
-                      <Plus size={14} /> Add Seating Area
-                    </button>
-                  </div>
-
+                  {/* Seating Areas Section */}
                   <div className="space-y-4">
-                    {form.seatingAreas.map((area, index) => (
-                      <div key={index} className="border border-gray-100 p-4 rounded-2xl bg-gray-50/30 relative space-y-3">
-                        <button 
-                          type="button" 
-                          onClick={() => removeSeatingArea(index)}
-                          className="absolute top-4 right-4 text-gray-400 hover:text-red-500 cursor-pointer transition-colors"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                        
-                        <div className="grid grid-cols-2 gap-3 pr-6">
-                          <FormField label={`Area #${index+1} Name`} name="name" placeholder="e.g. Rooftop Terrace" value={area.name} onChange={(e) => handleSeatingAreaChange(index, 'name', e.target.value)} />
-                          <FormField label="Short Description" name="description" placeholder="e.g. Open-air dining under stars" value={area.description} onChange={(e) => handleSeatingAreaChange(index, 'description', e.target.value)} />
+                    <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                      <h3 className="text-xs font-bold text-brown-900 uppercase tracking-wider flex items-center gap-1"><LayoutGrid size={14} className="text-gold-500" /> Seating Areas</h3>
+                      <button 
+                        type="button" 
+                        onClick={addSeatingArea}
+                        className="px-2.5 py-1.5 border border-brown-900 hover:bg-brown-900 hover:text-cream-100 text-brown-900 text-xs font-bold rounded-lg flex items-center gap-1 transition-all cursor-pointer"
+                      >
+                        <Plus size={12} /> Add Area
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {form.seatingAreas.map((area, index) => (
+                        <div key={index} className="border border-gray-100 p-4 rounded-xl bg-gray-50/50 relative space-y-3 shadow-sm">
+                          <button 
+                            type="button" 
+                            onClick={() => removeSeatingArea(index)}
+                            className="absolute top-3 right-3 text-gray-400 hover:text-red-500 cursor-pointer transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                           
-                          <div className="col-span-2">
-                            <label className="block text-xs font-semibold text-brown-700/60 uppercase tracking-wider mb-1.5">Optional Area Image</label>
+                          <div className="space-y-2.5">
                             <input 
-                              type="file" 
-                              accept="image/*" 
-                              onChange={(e) => handleImageFile(e, 'seating', index)}
-                              className="text-xs text-gray-500" 
+                              type="text"
+                              placeholder="Area Name (e.g. Rooftop, Private Room)"
+                              value={area.name}
+                              onChange={(e) => handleSeatingAreaChange(index, 'name', e.target.value)}
+                              className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-brown-900 focus:outline-none"
                             />
-                            {area.image && (
-                              <img src={area.image} alt="Preview" className="w-16 h-12 rounded object-cover mt-2 border border-gray-100" />
-                            )}
+                            <input 
+                              type="text"
+                              placeholder="Description"
+                              value={area.description}
+                              onChange={(e) => handleSeatingAreaChange(index, 'description', e.target.value)}
+                              className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs text-brown-800 focus:outline-none"
+                            />
+                            
+                            {/* ADVANCED SEATING FEATURE */}
+                            <div className="flex items-center justify-between gap-2 border-t border-gray-100 pt-2 text-[10px]">
+                              <label className="flex items-center gap-1 text-brown-800 cursor-pointer">
+                                <input 
+                                  type="checkbox" 
+                                  checked={area.hasAirPurifier || false} 
+                                  onChange={(e) => handleSeatingAreaChange(index, 'hasAirPurifier', e.target.checked)}
+                                  className="rounded accent-gold-500 scale-75" 
+                                />
+                                <span className="font-semibold">Air Purifier / Clean AC (Adv)</span>
+                              </label>
+                              <div className="flex items-center gap-1 font-semibold">
+                                <span>Premium Fee (Adv): ₹</span>
+                                <input 
+                                  type="number"
+                                  placeholder="0"
+                                  value={area.premiumCharge || ''}
+                                  onChange={(e) => handleSeatingAreaChange(index, 'premiumCharge', parseInt(e.target.value) || 0)}
+                                  className="w-10 border border-gray-200 rounded text-center text-[10px] py-0.5 focus:outline-none"
+                                />
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* 7. TABLE TYPES */}
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SectionHeader id="tables" label="Table Types & Capacity" icon={Users} active={activeSections.tables} onClick={toggleSection} count={form.tableTypes.length} />
-            <AnimatePresence>
-              {activeSections.tables && (
-                <motion.div 
-                  initial={{ height: 0, opacity: 0 }} 
-                  animate={{ height: 'auto', opacity: 1 }} 
-                  exit={{ height: 0, opacity: 0 }}
-                  className="p-6 border-t border-gray-50 space-y-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-brown-700/60 font-semibold"><Info size={14} className="inline mr-1" /> Dynamic layout tables (2 Seater, Family Table)</span>
-                    <button 
-                      type="button" 
-                      onClick={addTableType}
-                      className="px-3 py-1.5 border border-brown-900 hover:bg-brown-900 hover:text-cream-100 text-brown-900 text-xs font-semibold rounded-lg flex items-center gap-1 transition-all cursor-pointer"
-                    >
-                      <Plus size={14} /> Add Table Type
-                    </button>
+                      ))}
+                    </div>
                   </div>
 
-                  <div className="space-y-4">
-                    {form.tableTypes.map((table, index) => (
-                      <div key={index} className="border border-gray-100 p-4 rounded-2xl bg-gray-50/30 relative grid grid-cols-2 sm:grid-cols-4 gap-3 items-end pr-8">
-                        <button 
-                          type="button" 
-                          onClick={() => removeTableType(index)}
-                          className="absolute top-4 right-4 text-gray-400 hover:text-red-500 cursor-pointer transition-colors"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                  {/* Table Types & Capacity Section */}
+                  <div className="space-y-4 border-t border-gray-100 pt-6">
+                    <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                      <h3 className="text-xs font-bold text-brown-900 uppercase tracking-wider flex items-center gap-1"><Users size={14} className="text-gold-500" /> Table Types & Capacity</h3>
+                      <button 
+                        type="button" 
+                        onClick={addTableType}
+                        className="px-2.5 py-1.5 border border-brown-900 hover:bg-brown-900 hover:text-cream-100 text-brown-900 text-xs font-bold rounded-lg flex items-center gap-1 transition-all cursor-pointer"
+                      >
+                        <Plus size={12} /> Add Table Row
+                      </button>
+                    </div>
 
-                        <div className="col-span-1">
-                          <label className="block text-xs font-semibold text-brown-700/60 uppercase tracking-wider mb-1.5">Table Name</label>
-                          <input 
-                            type="text" 
-                            placeholder="e.g. 4 Seater Cab" 
-                            value={table.name} 
-                            onChange={(e) => handleTableTypeChange(index, 'name', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gold-500/30 text-brown-900 bg-white" 
-                          />
-                        </div>
-
-                        <div className="col-span-1">
-                          <label className="block text-xs font-semibold text-brown-700/60 uppercase tracking-wider mb-1.5">Capacity (Pax)</label>
-                          <input 
-                            type="number" 
-                            placeholder="4" 
-                            value={table.capacity} 
-                            onChange={(e) => handleTableTypeChange(index, 'capacity', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gold-500/30 text-brown-900 bg-white" 
-                          />
-                        </div>
-
-                        <div className="col-span-1">
-                          <label className="block text-xs font-semibold text-brown-700/60 uppercase tracking-wider mb-1.5">Quantity</label>
-                          <input 
-                            type="number" 
-                            placeholder="5" 
-                            value={table.quantity} 
-                            onChange={(e) => handleTableTypeChange(index, 'quantity', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gold-500/30 text-brown-900 bg-white" 
-                          />
-                        </div>
-
-                        <div className="col-span-1">
-                          <label className="block text-xs font-semibold text-brown-700/60 uppercase tracking-wider mb-1.5">Seating Area</label>
-                          <select 
-                            value={table.seatingArea || ''} 
-                            onChange={(e) => handleTableTypeChange(index, 'seatingArea', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gold-500/30 text-brown-900 bg-white cursor-pointer"
+                    <div className="space-y-4">
+                      {form.tableTypes.map((table, index) => (
+                        <div key={index} className="border border-gray-100 p-4 rounded-xl bg-gray-50/50 relative space-y-4 shadow-sm">
+                          <button 
+                            type="button" 
+                            onClick={() => removeTableType(index)}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-red-500 cursor-pointer transition-colors"
                           >
-                            <option value="">None / Floating</option>
-                            {form.seatingAreas.map(a => <option key={a.name} value={a.name}>{a.name}</option>)}
-                          </select>
+                            <Trash2 size={14} />
+                          </button>
+
+                          {/* Base Inputs row */}
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div>
+                              <label className="block text-[10px] font-bold text-brown-700/60 uppercase mb-1">Table Name</label>
+                              <input 
+                                type="text" 
+                                placeholder="e.g. 2 Seater Cozy" 
+                                value={table.name} 
+                                onChange={(e) => handleTableTypeChange(index, 'name', e.target.value)}
+                                className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs text-brown-900 bg-white" 
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-brown-700/60 uppercase mb-1">Capacity (Pax)</label>
+                              <input 
+                                type="number" 
+                                placeholder="2" 
+                                value={table.capacity} 
+                                onChange={(e) => handleTableTypeChange(index, 'capacity', e.target.value)}
+                                className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs text-brown-900 bg-white" 
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-brown-700/60 uppercase mb-1">Quantity</label>
+                              <input 
+                                type="number" 
+                                placeholder="4" 
+                                value={table.quantity} 
+                                onChange={(e) => handleTableTypeChange(index, 'quantity', e.target.value)}
+                                className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs text-brown-900 bg-white" 
+                              />
+                            </div>
+
+                            {/* Seating Area Selection: 2 Checkboxes (mutually exclusive) */}
+                            <div>
+                              <label className="block text-[10px] font-bold text-brown-700/60 uppercase mb-2">Seating Area Option</label>
+                              <div className="flex flex-col gap-1.5 mt-0.5">
+                                <label className="flex items-center gap-1.5 text-xs text-brown-850 cursor-pointer">
+                                  <input 
+                                    type="checkbox" 
+                                    checked={table.seatingArea === 'Indoor Seating'} 
+                                    onChange={() => handleTableTypeChange(index, 'seatingArea', 'Indoor Seating')}
+                                    className="rounded accent-gold-500 scale-90" 
+                                  />
+                                  <span className="font-semibold text-brown-800">Indoor Seating</span>
+                                </label>
+                                <label className="flex items-center gap-1.5 text-xs text-brown-850 cursor-pointer">
+                                  <input 
+                                    type="checkbox" 
+                                    checked={!table.seatingArea || table.seatingArea === '' || table.seatingArea === 'None / Floating'} 
+                                    onChange={() => handleTableTypeChange(index, 'seatingArea', '')}
+                                    className="rounded accent-gold-500 scale-90" 
+                                  />
+                                  <span className="text-gray-500 italic">None / Floating</span>
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* ADVANCED TABLE FEATURE */}
+                          <div className="flex flex-wrap gap-4 items-center bg-white border border-gray-100 p-2.5 rounded-lg text-[10px] font-semibold text-brown-800">
+                            <span className="text-gold-600 font-bold flex items-center gap-1"><Sparkles size={11} /> Advanced Features:</span>
+                            
+                            <div className="flex items-center gap-1">
+                              <span>Shape:</span>
+                              <select
+                                value={table.shape || 'Square'}
+                                onChange={(e) => handleTableTypeChange(index, 'shape', e.target.value)}
+                                className="border border-gray-200 rounded px-1.5 py-0.5 text-[10px] focus:outline-none"
+                              >
+                                <option value="Square">Square</option>
+                                <option value="Round">Round</option>
+                                <option value="Rectangular">Rectangular</option>
+                              </select>
+                            </div>
+
+                            <label className="flex items-center gap-1 cursor-pointer">
+                              <input 
+                                type="checkbox" 
+                                checked={table.isVip || false} 
+                                onChange={(e) => handleTableTypeChange(index, 'isVip', e.target.checked)}
+                                className="rounded accent-gold-500 scale-75" 
+                              />
+                              <span>VIP Class</span>
+                            </label>
+
+                            <label className="flex items-center gap-1 cursor-pointer">
+                              <input 
+                                type="checkbox" 
+                                checked={table.isBestseller || false} 
+                                onChange={(e) => handleTableTypeChange(index, 'isBestseller', e.target.checked)}
+                                className="rounded accent-gold-500 scale-75" 
+                              />
+                              <span>Bestseller badge</span>
+                            </label>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
 
-          {/* 8. AMENITIES & HIGHLIGHTS */}
+          {/* 7. AMENITIES & HIGHLIGHTS */}
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SectionHeader id="amenities" label="Amenities & Ambience Highlights" icon={Sparkles} active={activeSections.amenities} onClick={toggleSection} />
+            <SectionHeader id="amenities" label="Amenities & Ambience Highlights" icon={Sparkles} active={activeSection === 'amenities'} onClick={toggleSection} />
             <AnimatePresence>
-              {activeSections.amenities && (
+              {activeSection === 'amenities' && (
                 <motion.div 
                   initial={{ height: 0, opacity: 0 }} 
                   animate={{ height: 'auto', opacity: 1 }} 
                   exit={{ height: 0, opacity: 0 }}
                   className="p-6 border-t border-gray-50 space-y-5"
                 >
-                  {/* Amenities */}
                   <div className="space-y-2">
                     <label className="block text-xs font-bold text-brown-800 uppercase tracking-widest flex items-center gap-1.5"><ShieldCheck size={14} /> Restaurant Amenities</label>
                     <div className="flex flex-wrap gap-2">
@@ -916,7 +976,6 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
                     </div>
                   </div>
 
-                  {/* Highlights */}
                   <div className="space-y-2">
                     <label className="block text-xs font-bold text-brown-800 uppercase tracking-widest flex items-center gap-1.5"><Sparkles size={14} /> Ambience Highlights & Tags</label>
                     <div className="flex flex-wrap gap-2">
@@ -940,7 +999,6 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
                       })}
                     </div>
 
-                    {/* Custom Highlights Tag input */}
                     <div className="flex gap-2 items-center mt-3 max-w-sm">
                       <input 
                         type="text" 
@@ -964,11 +1022,11 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
             </AnimatePresence>
           </div>
 
-          {/* 9. MENU HIGHLIGHTS */}
+          {/* 8. MENU HIGHLIGHTS */}
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SectionHeader id="menu" label="Menu Highlights" icon={FileText} active={activeSections.menu} onClick={toggleSection} count={form.menuHighlights.length} />
+            <SectionHeader id="menu" label="Menu Highlights" icon={FileText} active={activeSection === 'menu'} onClick={toggleSection} count={form.menuHighlights.length} />
             <AnimatePresence>
-              {activeSections.menu && (
+              {activeSection === 'menu' && (
                 <motion.div 
                   initial={{ height: 0, opacity: 0 }} 
                   animate={{ height: 'auto', opacity: 1 }} 
@@ -1018,18 +1076,17 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
             </AnimatePresence>
           </div>
 
-          {/* 10. GALLERY */}
+          {/* 9. GALLERY */}
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SectionHeader id="gallery" label="Photo Gallery & Cover Photo" icon={ImageIcon} active={activeSections.gallery} onClick={toggleSection} count={form.gallery.length} />
+            <SectionHeader id="gallery" label="Photo Gallery & Cover Photo" icon={ImageIcon} active={activeSection === 'gallery'} onClick={toggleSection} count={form.gallery.length} />
             <AnimatePresence>
-              {activeSections.gallery && (
+              {activeSection === 'gallery' && (
                 <motion.div 
                   initial={{ height: 0, opacity: 0 }} 
                   animate={{ height: 'auto', opacity: 1 }} 
                   exit={{ height: 0, opacity: 0 }}
                   className="p-6 border-t border-gray-50 space-y-6"
                 >
-                  {/* Cover Photo */}
                   <div className="space-y-2">
                     <label className="block text-xs font-bold text-brown-800 uppercase tracking-widest">Cover Photo *</label>
                     {errors.coverImage && <span className="text-xs text-red-500 block font-bold">{errors.coverImage}</span>}
@@ -1076,7 +1133,6 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
                     </div>
                   </div>
 
-                  {/* Multiple Gallery Images */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <label className="block text-xs font-bold text-brown-800 uppercase tracking-widest">Multi-Image Gallery</label>
@@ -1096,7 +1152,6 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
                       </label>
                     </div>
 
-                    {/* Gallery Grid */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {form.gallery.map((img, index) => (
                         <div key={index} className="relative group rounded-xl border border-gray-100 overflow-hidden shadow-sm aspect-video bg-gray-50 flex flex-col justify-between">
@@ -1119,7 +1174,6 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
                             </button>
                           </div>
 
-                          {/* Category select */}
                           <select
                             value={img.category}
                             onChange={(e) => changeGalleryCategory(index, e.target.value)}
@@ -1130,143 +1184,6 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
                         </div>
                       ))}
                     </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* 11. RESERVATION SETTINGS */}
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SectionHeader id="reservations" label="Reservation Settings" icon={Settings2} active={activeSections.reservations} onClick={toggleSection} />
-            <AnimatePresence>
-              {activeSections.reservations && (
-                <motion.div 
-                  initial={{ height: 0, opacity: 0 }} 
-                  animate={{ height: 'auto', opacity: 1 }} 
-                  exit={{ height: 0, opacity: 0 }}
-                  className="p-6 border-t border-gray-50 grid grid-cols-2 gap-4"
-                >
-                  <div className="col-span-2 sm:col-span-1 flex items-center justify-between bg-gray-50/50 p-3 rounded-xl border border-gray-100">
-                    <label className="text-xs font-bold text-brown-900 cursor-pointer flex flex-col">
-                      <span>Accept Reservations</span>
-                      <span className="text-[10px] text-gray-400 font-normal">Enable online table bookings</span>
-                    </label>
-                    <input 
-                      type="checkbox" 
-                      name="acceptsReservations"
-                      checked={form.reservationSettings.acceptsReservations} 
-                      onChange={(e) => handleNestedChange(e, 'reservationSettings')}
-                      className="w-4 h-4 rounded text-gold-500 focus:ring-0 accent-gold-500" 
-                    />
-                  </div>
-
-                  <div className="col-span-2 sm:col-span-1 flex items-center justify-between bg-gray-50/50 p-3 rounded-xl border border-gray-100">
-                    <label className="text-xs font-bold text-brown-900 cursor-pointer flex flex-col">
-                      <span>Advance Booking Required</span>
-                      <span className="text-[10px] text-gray-400 font-normal">Bookings must be verified</span>
-                    </label>
-                    <input 
-                      type="checkbox" 
-                      name="advanceBookingRequired"
-                      checked={form.reservationSettings.advanceBookingRequired} 
-                      onChange={(e) => handleNestedChange(e, 'reservationSettings')}
-                      className="w-4 h-4 rounded text-gold-500 focus:ring-0 accent-gold-500" 
-                    />
-                  </div>
-
-                  <div className="col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div>
-                      <label className="block text-[10px] font-bold text-brown-700/60 uppercase mb-1.5">Min Group Size</label>
-                      <input 
-                        type="number" 
-                        name="minGroupSize"
-                        value={form.reservationSettings.minGroupSize}
-                        onChange={(e) => handleNestedChange(e, 'reservationSettings')}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs text-brown-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-brown-700/60 uppercase mb-1.5">Max Group Size</label>
-                      <input 
-                        type="number" 
-                        name="maxGroupSize"
-                        value={form.reservationSettings.maxGroupSize}
-                        onChange={(e) => handleNestedChange(e, 'reservationSettings')}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs text-brown-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-brown-700/60 uppercase mb-1.5">Duration (mins)</label>
-                      <input 
-                        type="number" 
-                        name="reservationDuration"
-                        value={form.reservationSettings.reservationDuration}
-                        onChange={(e) => handleNestedChange(e, 'reservationSettings')}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs text-brown-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-brown-700/60 uppercase mb-1.5">Cancellation Limit (hrs)</label>
-                      <input 
-                        type="number" 
-                        name="cancellationWindow"
-                        value={form.reservationSettings.cancellationWindow}
-                        onChange={(e) => handleNestedChange(e, 'reservationSettings')}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs text-brown-900"
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* 12. SOCIAL LINKS */}
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SectionHeader id="socials" label="Social & Web Links" icon={LinkIcon} active={activeSections.socials} onClick={toggleSection} />
-            <AnimatePresence>
-              {activeSections.socials && (
-                <motion.div 
-                  initial={{ height: 0, opacity: 0 }} 
-                  animate={{ height: 'auto', opacity: 1 }} 
-                  exit={{ height: 0, opacity: 0 }}
-                  className="p-6 border-t border-gray-50 grid grid-cols-2 gap-4"
-                >
-                  <FormField label="Instagram URL" icon={LinkIcon} name="instagram" placeholder="https://instagram.com/..." value={form.socialLinks.instagram} onChange={(e) => handleNestedChange(e, 'socialLinks')} />
-                  <FormField label="Facebook URL" icon={LinkIcon} name="facebook" placeholder="https://facebook.com/..." value={form.socialLinks.facebook} onChange={(e) => handleNestedChange(e, 'socialLinks')} />
-                  <FormField label="Website Address" icon={Globe} name="website" placeholder="https://www.restaurant.com" value={form.socialLinks.website} onChange={(e) => handleNestedChange(e, 'socialLinks')} />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* 13. VERIFICATION */}
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SectionHeader id="verification" label="Legal & Verification" icon={ShieldCheck} active={activeSections.verification} onClick={toggleSection} />
-            <AnimatePresence>
-              {activeSections.verification && (
-                <motion.div 
-                  initial={{ height: 0, opacity: 0 }} 
-                  animate={{ height: 'auto', opacity: 1 }} 
-                  exit={{ height: 0, opacity: 0 }}
-                  className="p-6 border-t border-gray-50 grid grid-cols-2 gap-4"
-                >
-                  <FormField label="GST Registration Number" name="gstNumber" placeholder="e.g. 29AAAAB1111C1Z1" value={form.verification.gstNumber} onChange={(e) => handleNestedChange(e, 'verification')} />
-                  <FormField label="FSSAI License Number" name="fssaiNumber" placeholder="e.g. 12345678901234" value={form.verification.fssaiNumber} onChange={(e) => handleNestedChange(e, 'verification')} />
-                  
-                  <div className="col-span-2 sm:col-span-1">
-                    <label className="block text-xs font-semibold text-brown-700/60 uppercase tracking-wider mb-1.5 font-sans">Verification Status</label>
-                    <select 
-                      name="status" 
-                      value={form.verification.status} 
-                      onChange={(e) => handleNestedChange(e, 'verification')}
-                      className="w-full pl-3 pr-8 py-2.5 border border-gray-200 rounded-xl text-sm text-brown-900 bg-white focus:outline-none focus:ring-2 focus:ring-gold-500/30 focus:border-gold-500 cursor-pointer"
-                    >
-                      <option value="Pending">Pending Audit</option>
-                      <option value="Verified">Verified Official</option>
-                      <option value="Rejected">Flagged / Rejected</option>
-                    </select>
                   </div>
                 </motion.div>
               )}
@@ -1288,7 +1205,7 @@ const AddRestaurantForm = ({ onClose, onSuccess }) => {
             type="submit"
             onClick={handleSubmit}
             disabled={submitting}
-            className="px-6 py-2.5 bg-gradient-to-r from-brown-900 to-brown-800 text-cream-100 font-bold text-xs rounded-xl shadow-lg shadow-brown-900/25 hover:shadow-brown-900/35 hover:from-gold-500 hover:to-yellow-500 hover:text-brown-900 disabled:opacity-60 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+            className="px-6 py-2.5 bg-gradient-to-r from-brown-900 to-brown-800 text-cream-100 font-bold text-xs rounded-xl shadow-lg shadow-brown-900/25 hover:shadow-brown-900/40 hover:from-gold-500 hover:to-yellow-500 hover:text-brown-900 disabled:opacity-60 transition-all cursor-pointer flex items-center justify-center gap-1.5"
           >
             {submitting ? (
               <>

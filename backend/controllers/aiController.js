@@ -304,7 +304,7 @@ exports.optimizeLayout = async (req, res) => {
         vipTables.push(t);
       } else if (cat.includes('window') || cat.includes('scenic')) {
         windowTables.push(t);
-      } else if (cat.includes('bar') || cat.includes('lounge')) {
+      } else if (cat.includes('bar') || cat.includes('lounge') || cat.includes('rooftop')) {
         barTables.push(t);
       } else {
         mainTables.push(t);

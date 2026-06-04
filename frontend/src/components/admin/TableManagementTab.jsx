@@ -1,12 +1,61 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, LayoutGrid, Move, Save, ChevronRight, ChevronLeft, Sparkles, AlertTriangle, HelpCircle } from 'lucide-react';
+import { Plus, Trash2, LayoutGrid, Move, Save, ChevronRight, ChevronLeft, Sparkles, AlertTriangle, HelpCircle, CheckCircle2, Wand2 } from 'lucide-react';
 import axios from 'axios';
 
 const CATEGORY_OPTIONS = ['Rooftop', 'Window Side', 'Corner Side', 'Center', 'Courtyard', 'Private Cabin', 'Family Table', 'Couple Table', 'Outdoor', 'Bar Area'];
 
+// Helper to space table layouts on a 100x100 grid based on physical zones
+const calculateLayoutPositionsLocal = (tablesList) => {
+  const updated = tablesList.map(t => ({ ...t }));
+  
+  const windowTables = updated.filter(t => (t.category || '').toLowerCase().includes('window'));
+  const rooftopTables = updated.filter(t => (t.category || '').toLowerCase().includes('rooftop'));
+  const indoorTables = updated.filter(t => (t.category || '').toLowerCase().includes('indoor') || (!t.category.toLowerCase().includes('window') && !t.category.toLowerCase().includes('rooftop')));
+  
+  // Window Side: Top center row, y = 11%
+  if (windowTables.length > 0) {
+    const count = windowTables.length;
+    windowTables.forEach((t, idx) => {
+      const x = count > 1 ? 34 + idx * (28 / (count - 1)) : 48;
+      t.positionX = Math.round(x * 10) / 10;
+      t.positionY = 11.0;
+    });
+  }
+  
+  // Rooftop Dining: x = 85%, y spreads vertically from 11% to 75%
+  if (rooftopTables.length > 0) {
+    const count = rooftopTables.length;
+    rooftopTables.forEach((t, idx) => {
+      const y = count > 1 ? 11 + idx * (64 / (count - 1)) : 11;
+      t.positionX = 85.0;
+      t.positionY = Math.round(y * 10) / 10;
+    });
+  }
+  
+  // Indoor Seating (Main Dining Hall): center grid
+  if (indoorTables.length > 0) {
+    const count = indoorTables.length;
+    const cols = Math.ceil(Math.sqrt(count));
+    const rows = Math.ceil(count / cols);
+    const xStep = cols > 1 ? (28 / (cols - 1)) : 28;
+    const yStep = rows > 1 ? (38 / (rows - 1)) : 38;
+    
+    indoorTables.forEach((t, idx) => {
+      const col = idx % cols;
+      const row = Math.floor(idx / cols);
+      const x = cols > 1 ? 34 + col * xStep : 48;
+      const y = rows > 1 ? 38 + row * yStep : 57;
+      t.positionX = Math.round(x * 10) / 10;
+      t.positionY = Math.round(y * 10) / 10;
+    });
+  }
+  
+  return updated;
+};
+
 // ─── Blueprint Editor (drag & drop positioning) ────────────────────────────
-const BlueprintEditor = ({ tables, restaurantId, onSavePositions, isDemoMode = false }) => {
+const BlueprintEditor = ({ tables, restaurantId, onSavePositions, isDemoMode = false, isWizardMode = false }) => {
   const floorRef = useRef(null);
   const [positions, setPositions] = useState({});
   const [dragging, setDragging] = useState(null);
@@ -28,14 +77,12 @@ const BlueprintEditor = ({ tables, restaurantId, onSavePositions, isDemoMode = f
   const handleAIArrange = async () => {
     setOptimizing(true);
     try {
-      if (isDemoMode) {
-        await new Promise(r => setTimeout(r, 1200));
+      if (isDemoMode || isWizardMode) {
+        await new Promise(r => setTimeout(r, 1000));
         const newPositions = {};
-        tables.forEach((t, idx) => {
-          newPositions[t.id] = {
-            x: 10 + (idx % 4) * 22 + Math.random() * 5,
-            y: 15 + Math.floor(idx / 4) * 25 + Math.random() * 5
-          };
+        const arranged = calculateLayoutPositionsLocal(tables);
+        arranged.forEach(t => {
+          newPositions[t.id] = { x: t.positionX, y: t.positionY };
         });
         setPositions(newPositions);
         onSavePositions(newPositions);
@@ -78,11 +125,11 @@ const BlueprintEditor = ({ tables, restaurantId, onSavePositions, isDemoMode = f
   const handleSave = async () => {
     setSaving(true);
     try {
-      if (isDemoMode) {
-        await new Promise(r => setTimeout(r, 800));
+      if (isDemoMode || isWizardMode) {
+        await new Promise(r => setTimeout(r, 600));
         setSaved(true);
         onSavePositions(positions);
-        setTimeout(() => setSaved(false), 2500);
+        setTimeout(() => setSaved(false), 2000);
         return;
       }
       await Promise.all(
@@ -102,6 +149,7 @@ const BlueprintEditor = ({ tables, restaurantId, onSavePositions, isDemoMode = f
       setSaving(false);
     }
   };
+
 
   return (
     <div>
@@ -212,7 +260,166 @@ const TableManagementTab = ({ restaurants, onRefresh, isDemoMode = false }) => {
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState('');
   const [deletingId, setDeletingId] = useState(null);
-  const [tab, setTab] = useState('list'); // 'list' | 'blueprint'
+  const [tab, setTab] = useState('list'); // 'list' | 'blueprint' | 'wizard'
+
+  // ─── Setup Wizard States ──────────────────────────────────────────────────
+  const [wizardStep, setWizardStep] = useState(1);
+  const [wizardAreas, setWizardAreas] = useState([
+    { name: 'Indoor Seating', description: 'Main dining hall under warm luxury chandelier lighting.' },
+    { name: 'Rooftop Dining', description: 'Scenic open-air patio tables with dynamic skyline views.' },
+    { name: 'Window Side', description: 'Cozy alcove window tables overlooking botanical gardens.' }
+  ]);
+  const [wizardTableTypes, setWizardTableTypes] = useState([
+    { capacity: 2, quantity: 4 },
+    { capacity: 4, quantity: 6 },
+    { capacity: 6, quantity: 2 }
+  ]);
+  
+  // Default allocations matching:
+  // Indoor: 6 tables (2 of 2-seaters, 4 of 4-seaters)
+  // Rooftop: 4 tables (2 of 2-seaters, 2 of 4-seaters)
+  // Window Side: 2 tables (2 of 6-seaters)
+  const [wizardAllocations, setWizardAllocations] = useState({
+    '2-Indoor Seating': 2,
+    '2-Rooftop Dining': 2,
+    '2-Window Side': 0,
+    '4-Indoor Seating': 4,
+    '4-Rooftop Dining': 2,
+    '4-Window Side': 0,
+    '6-Indoor Seating': 0,
+    '6-Rooftop Dining': 0,
+    '6-Window Side': 2
+  });
+
+  const [wizardInventory, setWizardInventory] = useState([]);
+  const [wizardSaving, setWizardSaving] = useState(false);
+
+  const getRandomDescription = (capacity, area) => {
+    const descriptions = {
+      2: {
+        'Indoor Seating': [
+          'Cozy indoor table ideal for intimate date nights and deep conversations.',
+          'Elegant table next to the wine cellar, perfect for a couple.'
+        ],
+        'Rooftop Dining': [
+          'Romantic open-air seating offering starlit sky views.',
+          'High-top table at the terrace edge, enjoying cool breezes.'
+        ],
+        'Window Side': [
+          'Intimate window alcove overlooking the garden walk.',
+          'Bright window-side seating, great for morning brunch.'
+        ]
+      },
+      4: {
+        'Indoor Seating': [
+          'Grand dining table situated under the central crystal chandelier.',
+          'Comfortable leather booth table, popular for business lunches.'
+        ],
+        'Rooftop Dining': [
+          'Spacious rooftop table near the live acoustic band stage.',
+          'Scenic deck seating under warm fairy lights.'
+        ],
+        'Window Side': [
+          'Prime window-side seating with double aspect corner view.',
+          'Comfortable dining table right next to the grand floor-to-ceiling glass panel windows.'
+        ]
+      },
+      6: {
+        'Indoor Seating': [
+          'Large family banquette table offering plush seating and swift service.',
+          'Prestige dining table set in a semi-private wood-paneled corner.'
+        ],
+        'Rooftop Dining': [
+          'Premium high-capacity patio table under a luxury cabana.',
+          'Grand sky-view dining table perfect for birthday celebrations.'
+        ],
+        'Window Side': [
+          'Elegant large window table with panoramic view of the botanical gardens.',
+          'Grand panoramic window-side table, perfect for family dinners.'
+        ]
+      }
+    };
+
+    const areaKey = Object.keys(descriptions[capacity] || {}).find(k => area.toLowerCase().includes(k.toLowerCase().split(' ')[0])) || Object.keys(descriptions[capacity] || {})[0];
+    const list = descriptions[capacity]?.[areaKey] || ['Premium dining table offering superb hospitality.'];
+    return list[Math.floor(Math.random() * list.length)];
+  };
+
+  const generateInventory = () => {
+    const list = [];
+    let tableNum = 1;
+    wizardAreas.forEach(area => {
+      wizardTableTypes.forEach(type => {
+        const qty = wizardAllocations[`${type.capacity}-${area.name}`] || 0;
+        for (let i = 0; i < qty; i++) {
+          list.push({
+            id: `temp-t-${tableNum}`,
+            tableNumber: `T${tableNum}`,
+            category: area.name,
+            capacity: type.capacity,
+            description: getRandomDescription(type.capacity, area.name),
+            isBestseller: type.capacity === 6 || (type.capacity === 4 && tableNum % 2 === 0)
+          });
+          tableNum++;
+        }
+      });
+    });
+    const positioned = calculateLayoutPositionsLocal(list);
+    setWizardInventory(positioned);
+  };
+
+  const handleAllocationChange = (capacity, areaName, val) => {
+    const parsed = parseInt(val, 10) || 0;
+    setWizardAllocations(prev => ({
+      ...prev,
+      [`${capacity}-${areaName}`]: Math.max(0, parsed)
+    }));
+  };
+
+  const getAssignedQuantityForType = (capacity) => {
+    return wizardAreas.reduce((sum, area) => sum + (wizardAllocations[`${capacity}-${area.name}`] || 0), 0);
+  };
+
+  const getAssignedQuantityForArea = (areaName) => {
+    return wizardTableTypes.reduce((sum, type) => sum + (wizardAllocations[`${type.capacity}-${areaName}`] || 0), 0);
+  };
+
+  const handleSaveWizardLayout = async () => {
+    setWizardSaving(true);
+    setError('');
+    try {
+      if (isDemoMode) {
+        await new Promise(r => setTimeout(r, 1200));
+        setWizardStep(6);
+        onRefresh();
+        return;
+      }
+      
+      const payload = {
+        restaurantId: restaurant.id,
+        tables: wizardInventory.map(t => ({
+          tableNumber: t.tableNumber,
+          category: t.category,
+          capacity: t.capacity,
+          description: t.description,
+          positionX: t.positionX,
+          positionY: t.positionY,
+          isBestseller: t.isBestseller
+        })),
+        seatingAreas: wizardAreas,
+        tableTypes: wizardTableTypes
+      };
+
+      await axios.post(`/api/restaurants/${restaurant.id}/tables/bulk`, payload);
+      setWizardStep(6);
+      onRefresh();
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.message || 'Failed to save seating setup layout.');
+    } finally {
+      setWizardSaving(false);
+    }
+  };
 
   // Update tables when selected restaurant changes
   useEffect(() => {
@@ -388,6 +595,12 @@ const TableManagementTab = ({ restaurants, onRefresh, isDemoMode = false }) => {
         >
           <Move size={15} /> Floor Plan Editor
         </button>
+        <button
+          onClick={() => setTab('wizard')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-bold transition-all cursor-pointer ${tab === 'wizard' ? 'bg-white text-brown-900 shadow-sm' : 'text-brown-500 hover:text-brown-900'}`}
+        >
+          <Sparkles size={15} className="text-gold-500 animate-pulse" /> Restaurant Setup Flow
+        </button>
       </div>
 
       {/* TABLE LIST TAB */}
@@ -541,6 +754,488 @@ const TableManagementTab = ({ restaurants, onRefresh, isDemoMode = false }) => {
           >
             <ChevronLeft size={14} /> Back to Table List
           </button>
+        </div>
+      )}
+
+      {/* RESTAURANT SETUP FLOW WIZARD */}
+      {tab === 'wizard' && (
+        <div className="space-y-6">
+          {/* Step tracker header */}
+          <div className="bg-cream-100/50 border border-cream-200/50 rounded-2xl p-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="text-left">
+              <span className="text-[10px] bg-gold-500 text-brown-900 font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">Step {wizardStep} of 6</span>
+              <h3 className="font-serif font-bold text-brown-900 text-base mt-1">
+                {wizardStep === 1 && "1️⃣ Create Dining Areas / Zones"}
+                {wizardStep === 2 && "2️⃣ Configure Table Capacities & Quantities"}
+                {wizardStep === 3 && "3️⃣ Allocate Tables to Seating Zones"}
+                {wizardStep === 4 && "4️⃣ Auto-Generated Inventory Preview"}
+                {wizardStep === 5 && "5️⃣ Spaced Out Floor Plan Grid Layout"}
+                {wizardStep === 6 && "6️⃣ Ready For Reservations!"}
+              </h3>
+            </div>
+            {/* Horizontal indicators */}
+            <div className="flex items-center gap-1.5">
+              {[1, 2, 3, 4, 5, 6].map(s => (
+                <div key={s} className="flex items-center">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all border
+                    ${wizardStep === s
+                      ? 'bg-brown-900 text-cream-100 border-brown-900 ring-2 ring-gold-500/30'
+                      : s < wizardStep
+                      ? 'bg-gold-500 text-brown-900 border-gold-500'
+                      : 'bg-white text-brown-500 border-cream-200'}`}
+                  >
+                    {s}
+                  </div>
+                  {s < 6 && <div className={`w-4 h-0.5 ${s < wizardStep ? 'bg-gold-500' : 'bg-cream-200'}`} />}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* STEP 1: CREATE AREAS */}
+          {wizardStep === 1 && (
+            <div className="bg-cream-100/30 border border-cream-200/50 rounded-2xl p-5 space-y-4 text-left">
+              <div>
+                <h4 className="font-serif font-bold text-brown-900">Define Dining Areas</h4>
+                <p className="text-xs text-brown-600 font-sans mt-0.5">Define physical zones in your restaurant (e.g. Indoor, Rooftop, Window Side).</p>
+              </div>
+
+              <div className="space-y-3">
+                {wizardAreas.map((area, idx) => (
+                  <div key={idx} className="flex items-center gap-3 bg-white border border-cream-200 p-3 rounded-xl shadow-sm animate-fade-in">
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] text-brown-500 font-bold uppercase tracking-wider block mb-1">Zone Name</label>
+                        <input
+                          type="text"
+                          value={area.name}
+                          onChange={e => {
+                            const updated = [...wizardAreas];
+                            updated[idx].name = e.target.value;
+                            setWizardAreas(updated);
+                          }}
+                          placeholder="Area Name (e.g. Indoor Seating)"
+                          className="px-3 py-2 w-full border border-cream-200 rounded-lg text-sm bg-cream-50/10 focus:outline-none focus:ring-2 focus:ring-gold-500/20 text-brown-900 font-bold"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-brown-500 font-bold uppercase tracking-wider block mb-1">Description</label>
+                        <input
+                          type="text"
+                          value={area.description || ''}
+                          onChange={e => {
+                            const updated = [...wizardAreas];
+                            updated[idx].description = e.target.value;
+                            setWizardAreas(updated);
+                          }}
+                          placeholder="Description (e.g. Cozy tables next to windows)"
+                          className="px-3 py-2 w-full border border-cream-200 rounded-lg text-sm bg-cream-50/10 focus:outline-none focus:ring-2 focus:ring-gold-500/20 text-brown-800"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-end h-full pt-6">
+                      <button
+                        onClick={() => {
+                          if (wizardAreas.length <= 1) return;
+                          setWizardAreas(wizardAreas.filter((_, i) => i !== idx));
+                        }}
+                        className="p-2.5 text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-between items-center pt-2">
+                <button
+                  onClick={() => setWizardAreas([...wizardAreas, { name: '', description: '' }])}
+                  className="flex items-center gap-1.5 text-xs font-bold text-brown-900 bg-cream-200 hover:bg-gold-500/20 px-4 py-2.5 rounded-xl transition-all cursor-pointer border border-cream-300"
+                >
+                  <Plus size={14} /> Add Seating Area
+                </button>
+                <button
+                  onClick={() => setWizardStep(2)}
+                  disabled={wizardAreas.some(a => !a.name.trim())}
+                  className="flex items-center gap-1 bg-brown-900 text-cream-100 hover:bg-gold-500 hover:text-brown-900 px-5 py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-45 cursor-pointer shadow-md"
+                >
+                  Next: Configure Table Types <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2: CONFIGURE TABLE TYPES */}
+          {wizardStep === 2 && (
+            <div className="bg-cream-100/30 border border-cream-200/50 rounded-2xl p-5 space-y-4 text-left">
+              <div>
+                <h4 className="font-serif font-bold text-brown-900">Define Table Layouts</h4>
+                <p className="text-xs text-brown-600 font-sans mt-0.5">Specify how many tables you have of each guest capacity (e.g. 2-seaters, 4-seaters, etc.).</p>
+              </div>
+
+              <div className="space-y-3">
+                {wizardTableTypes.map((type, idx) => (
+                  <div key={idx} className="flex items-center gap-3 bg-white border border-cream-200 p-3 rounded-xl shadow-sm animate-fade-in">
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="flex items-center gap-2">
+                        <label className="text-[11px] text-brown-600 font-bold w-20 uppercase">Capacity</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="20"
+                          value={type.capacity}
+                          onChange={e => {
+                            const updated = [...wizardTableTypes];
+                            updated[idx].capacity = parseInt(e.target.value, 10) || 1;
+                            setWizardTableTypes(updated);
+                          }}
+                          className="px-3 py-2 border border-cream-200 rounded-lg text-sm bg-cream-50/10 focus:outline-none focus:ring-2 focus:ring-gold-500/20 text-brown-900 font-bold w-full"
+                        />
+                        <span className="text-xs text-brown-500 shrink-0">guests</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-[11px] text-brown-600 font-bold w-20 uppercase">Quantity</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="50"
+                          value={type.quantity}
+                          onChange={e => {
+                            const updated = [...wizardTableTypes];
+                            updated[idx].quantity = parseInt(e.target.value, 10) || 1;
+                            setWizardTableTypes(updated);
+                          }}
+                          className="px-3 py-2 border border-cream-200 rounded-lg text-sm bg-cream-50/10 focus:outline-none focus:ring-2 focus:ring-gold-500/20 text-brown-900 font-bold w-full"
+                        />
+                        <span className="text-xs text-brown-500 shrink-0">tables</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (wizardTableTypes.length <= 1) return;
+                        setWizardTableTypes(wizardTableTypes.filter((_, i) => i !== idx));
+                      }}
+                      className="p-2.5 text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Total Configured Tables Status */}
+              <div className="bg-cream-100 p-3.5 rounded-xl border border-cream-200/50 flex items-center justify-between text-xs text-brown-800">
+                <span className="font-sans font-bold uppercase tracking-wider text-[10px]">Total Configured Dining Tables:</span>
+                <span className="text-base font-black font-serif text-brown-900">
+                  {wizardTableTypes.reduce((a, b) => a + b.quantity, 0)} tables
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center pt-2">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setWizardStep(1)}
+                    className="flex items-center gap-1 text-xs font-bold text-brown-850 bg-cream-250 hover:bg-cream-300 px-4 py-2.5 rounded-xl transition-all cursor-pointer border border-cream-300"
+                  >
+                    <ChevronLeft size={14} /> Back
+                  </button>
+                  <button
+                    onClick={() => setWizardTableTypes([...wizardTableTypes, { capacity: 2, quantity: 1 }])}
+                    className="flex items-center gap-1.5 text-xs font-bold text-brown-905 bg-cream-200 hover:bg-gold-500/20 px-4 py-2.5 rounded-xl transition-all cursor-pointer border border-cream-300"
+                  >
+                    <Plus size={14} /> Add Table Type
+                  </button>
+                </div>
+                <button
+                  onClick={() => setWizardStep(3)}
+                  disabled={wizardTableTypes.some(t => !t.capacity || !t.quantity)}
+                  className="flex items-center gap-1 bg-brown-900 text-cream-100 hover:bg-gold-500 hover:text-brown-900 px-5 py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-45 cursor-pointer shadow-md"
+                >
+                  Next: Assign to Areas <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: ALLOCATE TABLES TO AREAS */}
+          {wizardStep === 3 && (() => {
+            const indoorAssigned = getAssignedQuantityForArea('Indoor Seating');
+            const rooftopAssigned = getAssignedQuantityForArea('Rooftop Dining');
+            const windowAssigned = getAssignedQuantityForArea('Window Side');
+            
+            const totalRemaining = wizardTableTypes.reduce((sum, type) => {
+              return sum + (type.quantity - getAssignedQuantityForType(type.capacity));
+            }, 0);
+
+            const isAllAllocated = totalRemaining === 0;
+
+            return (
+              <div className="bg-cream-100/30 border border-cream-200/50 rounded-2xl p-5 space-y-4 text-left">
+                <div>
+                  <h4 className="font-serif font-bold text-brown-900">Allocate Seating Layout Matrices</h4>
+                  <p className="text-xs text-brown-600 font-sans mt-0.5">Assign how many of each table type go into your created dining areas.</p>
+                </div>
+
+                <div className="overflow-x-auto border border-cream-200 rounded-xl bg-white p-3 shadow-inner">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-cream-200">
+                        <th className="py-2 text-[10px] font-bold text-brown-600 uppercase tracking-wider">Table Size</th>
+                        <th className="py-2 text-[10px] font-bold text-brown-600 uppercase tracking-wider text-center">Qty Configured</th>
+                        {wizardAreas.map(area => (
+                          <th key={area.name} className="py-2 text-[10px] font-bold text-brown-600 uppercase tracking-wider text-center">{area.name}</th>
+                        ))}
+                        <th className="py-2 text-[10px] font-bold text-brown-600 uppercase tracking-wider text-center">Unassigned</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {wizardTableTypes.map(type => {
+                        const assigned = getAssignedQuantityForType(type.capacity);
+                        const remaining = type.quantity - assigned;
+                        return (
+                          <tr key={type.capacity} className="border-b border-cream-100">
+                            <td className="py-3.5 text-sm font-bold text-brown-950">{type.capacity} Seater</td>
+                            <td className="py-3.5 text-sm text-center text-brown-600 font-bold">{type.quantity}</td>
+                            {wizardAreas.map(area => {
+                              const key = `${type.capacity}-${area.name}`;
+                              const val = wizardAllocations[key] ?? 0;
+                              return (
+                                <td key={area.name} className="py-3.5 text-center">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max={type.quantity}
+                                    value={val}
+                                    onChange={e => handleAllocationChange(type.capacity, area.name, e.target.value)}
+                                    className="w-16 px-2.5 py-1.5 text-center border border-cream-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gold-500/20 focus:border-gold-500 text-brown-900 font-extrabold shadow-sm"
+                                  />
+                                </td>
+                              );
+                            })}
+                            <td className="py-3.5 text-center">
+                              <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${remaining === 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                                {remaining === 0 ? '✓ All Set' : `${remaining} left`}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {/* Matrix totals footer row */}
+                      <tr className="bg-cream-100/30">
+                        <td className="py-3 text-xs font-serif font-black text-brown-900 uppercase">Total Tables Assigned</td>
+                        <td className="py-3 text-sm text-center text-brown-900 font-black">
+                          {wizardTableTypes.reduce((a, b) => a + b.quantity, 0)}
+                        </td>
+                        {wizardAreas.map(area => {
+                          const total = getAssignedQuantityForArea(area.name);
+                          return (
+                            <td key={area.name} className="py-3 text-center text-sm font-black text-brown-900">
+                              {total} tables
+                            </td>
+                          );
+                        })}
+                        <td className="py-3 text-center text-xs font-bold text-brown-750">
+                          Allocated: {wizardTableTypes.reduce((a, b) => a + getAssignedQuantityForType(b.capacity), 0)}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Target Zone Limits Validation Banner */}
+                <div className="bg-white border border-cream-200 rounded-xl p-4 space-y-2">
+                  <span className="text-[10px] font-bold text-brown-700 uppercase tracking-widest block">🎯 Setup Constraints Check:</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className={`p-3 rounded-lg border text-xs font-semibold flex items-center justify-between
+                      ${indoorAssigned === 6 ? 'bg-green-50/50 border-green-200 text-green-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
+                      <span>Indoor: 6 Tables</span>
+                      <span className="font-extrabold">{indoorAssigned} / 6</span>
+                    </div>
+                    <div className={`p-3 rounded-lg border text-xs font-semibold flex items-center justify-between
+                      ${rooftopAssigned === 4 ? 'bg-green-50/50 border-green-200 text-green-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
+                      <span>Rooftop: 4 Tables</span>
+                      <span className="font-extrabold">{rooftopAssigned} / 4</span>
+                    </div>
+                    <div className={`p-3 rounded-lg border text-xs font-semibold flex items-center justify-between
+                      ${windowAssigned === 2 ? 'bg-green-50/50 border-green-200 text-green-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
+                      <span>Window Side: 2 Tables</span>
+                      <span className="font-extrabold">{windowAssigned} / 2</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center pt-2">
+                  <button
+                    onClick={() => setWizardStep(2)}
+                    className="flex items-center gap-1 text-xs font-bold text-brown-800 bg-cream-200 hover:bg-cream-300 px-4 py-2.5 rounded-xl transition-all cursor-pointer border border-cream-300"
+                  >
+                    <ChevronLeft size={14} /> Back
+                  </button>
+                  <button
+                    onClick={() => {
+                      generateInventory();
+                      setWizardStep(4);
+                    }}
+                    disabled={!isAllAllocated}
+                    className="flex items-center gap-1 bg-brown-900 text-cream-100 hover:bg-gold-500 hover:text-brown-900 px-5 py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-45 cursor-pointer shadow-md"
+                  >
+                    Next: Generate Inventory <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* STEP 4: AUTO GENERATE INVENTORY */}
+          {wizardStep === 4 && (
+            <div className="bg-cream-100/30 border border-cream-200/50 rounded-2xl p-5 space-y-4 text-left">
+              <div>
+                <h4 className="font-serif font-bold text-brown-900">Generated Table Inventory (T1–T12)</h4>
+                <p className="text-xs text-brown-600 font-sans mt-0.5">Review the automatically generated catalog codes, seating sizes, and descriptions.</p>
+              </div>
+
+              {/* Scrollable table details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-1">
+                {wizardInventory.map((table, idx) => (
+                  <div key={idx} className="bg-white border border-cream-200 p-3 rounded-xl shadow-sm flex items-center justify-between animate-fade-in">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-brown-900 text-sm font-serif">Table {table.tableNumber}</span>
+                        <span className="text-[9px] bg-cream-200 text-brown-800 px-2 py-0.5 rounded-full font-bold uppercase">{table.category}</span>
+                      </div>
+                      <p className="text-[10px] text-brown-500 italic mt-1">"{table.description}"</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-xs bg-gold-500/10 text-gold-600 border border-gold-500/25 px-2.5 py-1 rounded-lg font-extrabold block">{table.capacity} Seats</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-between items-center pt-2">
+                <button
+                  onClick={() => setWizardStep(3)}
+                  className="flex items-center gap-1 text-xs font-bold text-brown-800 bg-cream-200 hover:bg-cream-300 px-4 py-2.5 rounded-xl transition-all cursor-pointer border border-cream-300"
+                >
+                  <ChevronLeft size={14} /> Back
+                </button>
+                <button
+                  onClick={() => setWizardStep(5)}
+                  className="flex items-center gap-1 bg-brown-900 text-cream-100 hover:bg-gold-500 hover:text-brown-900 px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md"
+                >
+                  Next: Generate Floor Plan <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 5: GENERATE FLOOR PLAN */}
+          {wizardStep === 5 && (
+            <div className="bg-cream-100/30 border border-cream-200/50 rounded-2xl p-5 space-y-4 text-left">
+              <div>
+                <h4 className="font-serif font-bold text-brown-900">Blueprint Editor Positioning Grid</h4>
+                <p className="text-xs text-brown-600 font-sans mt-0.5">Tables have been arranged cleanly on their relative zone grids. Feel free to drag to customize.</p>
+              </div>
+
+              <div className="border border-cream-200 rounded-2xl p-4 bg-white shadow-sm">
+                <BlueprintEditor
+                  tables={wizardInventory}
+                  restaurantId={restaurant.id}
+                  isDemoMode={isDemoMode}
+                  isWizardMode={true}
+                  onSavePositions={(positions) => {
+                    setWizardInventory(prev => prev.map(t => ({
+                      ...t,
+                      positionX: positions[t.id]?.x ?? t.positionX,
+                      positionY: positions[t.id]?.y ?? t.positionY
+                    })));
+                  }}
+                />
+              </div>
+
+              <div className="flex justify-between items-center pt-2">
+                <button
+                  onClick={() => setWizardStep(4)}
+                  className="flex items-center gap-1 text-xs font-bold text-brown-850 bg-cream-250 hover:bg-cream-300 px-4 py-2.5 rounded-xl transition-all cursor-pointer border border-cream-300"
+                >
+                  <ChevronLeft size={14} /> Back
+                </button>
+                <button
+                  onClick={handleSaveWizardLayout}
+                  disabled={wizardSaving}
+                  className="flex items-center gap-1.5 bg-gold-500 hover:bg-gold-600 text-brown-900 px-6 py-3.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-md"
+                >
+                  {wizardSaving ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-brown-900/30 border-t-brown-900 rounded-full animate-spin" />
+                      Saving Setup Layout...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 size={14} />
+                      Save & Ready For Reservations!
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 6: READY FOR RESERVATIONS */}
+          {wizardStep === 6 && (
+            <div className="bg-cream-100/30 border border-cream-200/50 rounded-3xl p-8 max-w-xl mx-auto space-y-6 text-center animate-fade-in flex flex-col items-center">
+              <div className="w-20 h-20 bg-green-50 text-green-600 border border-green-200 rounded-full flex items-center justify-center shadow-md animate-bounce">
+                <CheckCircle2 size={42} />
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-2xl font-serif font-bold text-brown-900">Configuration Complete!</h3>
+                <p className="text-sm text-brown-700/80 font-sans max-w-sm mx-auto">
+                  Your seating zones, capacity structures, and T1–T12 floor blueprint layout have been initialized successfully.
+                </p>
+              </div>
+
+              {/* Layout Summary details card */}
+              <div className="w-full bg-white border border-cream-200 rounded-2xl p-4 text-left grid grid-cols-3 gap-3 shadow-inner">
+                <div className="text-center border-r border-cream-100">
+                  <p className="text-[10px] text-brown-600 font-bold uppercase">Areas</p>
+                  <p className="text-xl font-bold font-serif text-brown-900 mt-1">{wizardAreas.length}</p>
+                </div>
+                <div className="text-center border-r border-cream-100">
+                  <p className="text-[10px] text-brown-600 font-bold uppercase">Tables Created</p>
+                  <p className="text-xl font-bold font-serif text-brown-900 mt-1">{wizardInventory.length}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] text-brown-600 font-bold uppercase">Total Seats</p>
+                  <p className="text-xl font-bold font-serif text-brown-900 mt-1">
+                    {wizardInventory.reduce((sum, t) => sum + t.capacity, 0)} guests
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 w-full">
+                <button
+                  onClick={() => {
+                    setWizardStep(1);
+                    setTab('list');
+                  }}
+                  className="flex-1 bg-brown-900 text-cream-100 hover:bg-gold-500 hover:text-brown-900 py-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md"
+                >
+                  Return to Table List
+                </button>
+                <button
+                  onClick={() => {
+                    setWizardStep(1);
+                    setTab('blueprint');
+                  }}
+                  className="flex-1 bg-cream-200 text-brown-900 hover:bg-cream-300 py-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer border border-cream-300"
+                >
+                  View Floor Blueprint Editor
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
