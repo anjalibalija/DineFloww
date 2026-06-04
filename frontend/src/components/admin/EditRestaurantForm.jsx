@@ -4,7 +4,7 @@ import {
   X, Building2, User, Mail, Phone, MapPin, Globe, Clock, Utensils, 
   IndianRupee, ImageIcon, FileText, LayoutGrid, Users, 
   ListOrdered, ChevronDown, ChevronUp, Plus, Trash2, Check, ShieldCheck, 
-  Sparkles, Link as LinkIcon, Info, HelpCircle
+  Sparkles, Link as LinkIcon, Info, HelpCircle, Settings2
 } from 'lucide-react';
 import axios from 'axios';
 
